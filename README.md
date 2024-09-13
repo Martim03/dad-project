@@ -7,9 +7,12 @@ This repository holds the base code required to implement the project. Students 
 
 The project requires the following packages:
 
-- Java 22
+- Java 17
 - Maven 3.8.4
 - Protoc 3.12
+
+ vim ~/.bashrc
+ export JAVA_VERSION=17 (é a versão que achamos que deve ser)
 
 # Compiling
 
@@ -78,3 +81,6 @@ The console client opens a terminal from where students may issue configuration 
 To support these modules, the project has two additional directories:
 - *contract*, holding the required `.proto` files;
 - *util*, holding the general classes to collect RPC responses
+
+
+
