@@ -1,0 +1,18 @@
+//
+// Protocol buffers definition for Dadkvs Main Service
+//
+syntax = "proto3";
+package dadkvs;
+
+message commitOrderRequest {
+  int32 reqid = 1;
+  int32 order_num  = 2;
+}
+
+message commitOrderReply {
+}
+
+service DadkvsStep1Service {
+  rpc commitorder (commitOrderRequest) returns (commitOrderReply);
+}
+

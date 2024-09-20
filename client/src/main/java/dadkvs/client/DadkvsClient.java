@@ -138,32 +138,32 @@ public class DadkvsClient {
 	
         while (counter < loop_size) {
             int write_key = rnd.nextInt(key_range)+1;
-	    int write_value = rnd.nextInt(1000);
+	    	int write_value = rnd.nextInt(1000);
 	    
             // read key 1
-	    int read_key1 = rnd.nextInt(key_range)+1;
-	    VersionedValue kv_entry1 = doRead (read_key1);
-	    if (kv_entry1 == null) {
-		System.out.println("Panic! ..");
-		return;
-	    }
-	    Thread.sleep(rnd.nextInt(sleep_range) * 1000);
+			int read_key1 = rnd.nextInt(key_range)+1;
+			VersionedValue kv_entry1 = doRead (read_key1);
+			if (kv_entry1 == null) {
+			System.out.println("Panic! ..");
+			return;
+			}
+			Thread.sleep(rnd.nextInt(sleep_range) * 1000);
 
-            // read key 2
-	    int read_key2 = rnd.nextInt(key_range)+1;
-	    VersionedValue kv_entry2 = doRead (read_key2);
-	    if (kv_entry2 == null) {
-		System.out.println("Panic! ..");
-		return;
-	    }
-	    Thread.sleep(rnd.nextInt(sleep_range) * 1000);
+				// read key 2
+			int read_key2 = rnd.nextInt(key_range)+1;
+			VersionedValue kv_entry2 = doRead (read_key2);
+			if (kv_entry2 == null) {
+			System.out.println("Panic! ..");
+			return;
+			}
+			Thread.sleep(rnd.nextInt(sleep_range) * 1000);
 
 
-	    System.out.println("Commiting transaction number " + (counter+1));
-	    if (doCommit (read_key1, kv_entry1.getVersion(), read_key2, kv_entry2.getVersion(), write_key, write_value))
-		committed++;
-            Thread.sleep(rnd.nextInt(sleep_range) * 1000);
-            counter++;
+			System.out.println("Commiting transaction number " + (counter+1));
+			if (doCommit (read_key1, kv_entry1.getVersion(), read_key2, kv_entry2.getVersion(), write_key, write_value))
+			committed++;
+				Thread.sleep(rnd.nextInt(sleep_range) * 1000);
+				counter++;
         }
 	System.out.println("loop done. transactions committed = " + committed + ". transactions aborted = " + (loop_size-committed) + ".");
 	
