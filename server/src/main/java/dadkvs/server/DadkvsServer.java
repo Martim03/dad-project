@@ -1,5 +1,11 @@
 package dadkvs.server;
 
+import java.util.HashMap;
+import java.util.Map;
+import dadkvs.DadkvsMain;
+
+
+
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -37,10 +43,15 @@ public class DadkvsServer {
 	
 	port = base_port + my_id;
 
-	final BindableService service_impl = new DadkvsMainServiceImpl(server_state);
+	Map<Integer, DadkvsMain.CommitRequest> request_map = new HashMap<>();
+	Map<Integer, Integer> request_ordered_map = new HashMap<>();
+
+	CommitHandler handler = new CommitHandler(request_map,request_ordered_map);
+
+	final BindableService service_impl = new DadkvsMainServiceImpl(server_state,request_map,handler);
 	final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
 	final BindableService paxos_impl   = new DadkvsPaxosServiceImpl(server_state);
-	final BindableService step1_impl   = new DadkvsStep1ServiceImpl(server_state);
+	final BindableService step1_impl   = new DadkvsStep1ServiceImpl(server_state,request_ordered_map,handler);
 	
 	// Create a new server to listen on port.
 	Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl).addService(step1_impl).build();

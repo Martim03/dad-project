@@ -12,6 +12,9 @@ public class DadkvsStep1ServiceImpl extends DadkvsStep1ServiceGrpc.DadkvsStep1Se
 	Map<Integer, DadkvsMain.CommitRequest> request_map ;
 	Map<Integer, Integer> request_order_map ;
 
+
+    
+
     @Override
     public void commitorder(DadkvsStep1.commitOrderRequest request, StreamObserver<DadkvsStep1.commitOrderReply> responseObserver) {
         
