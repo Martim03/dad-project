@@ -4,9 +4,6 @@ import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
-import dadkvs.DadkvsMain;
-import dadkvs.DadkvsMainServiceGrpc;
-
 
 public class DadkvsServer {
 
@@ -43,9 +40,10 @@ public class DadkvsServer {
 	final BindableService service_impl = new DadkvsMainServiceImpl(server_state);
 	final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
 	final BindableService paxos_impl   = new DadkvsPaxosServiceImpl(server_state);
+	final BindableService step1_impl   = new DadkvsStep1ServiceImpl(server_state);
 	
 	// Create a new server to listen on port.
-	Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl).build();
+	Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl).addService(step1_impl).build();
 	// Start the server.
 	server.start();
 	// Server threads are running in the background.

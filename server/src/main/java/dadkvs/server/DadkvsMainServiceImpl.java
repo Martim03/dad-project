@@ -62,54 +62,54 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int writeval = request.getWriteval();
 
 		// for debug purposes
-		System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
+		// System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
 		
-		request_map.put(reqid,request, responseObserver); // PUT AWAKES LOCKS
+		// request_map.put(reqid,request, responseObserver); // PUT AWAKES LOCKS
 		// Guardar num dicionário
 
-		if ( server_state.i_am_leader == true ) {
-			// while(int i = 0 ; i < n_servers ; i++){
-			// 	enviar aqui o pedido para os outros servidores com o proto type shit
+		// if ( server_state.i_am_leader == true ) {
+		// 	while(int i = 0 ; i < n_servers ; i++){
+		// 		enviar aqui o pedido para os outros servidores com o proto type shit
 
-			// }
-		}
+		// 	}
+		// }
 
 
 		// Istu tudo tem que estar numa thread à parte que corre at all times
 
-		while( true ) {
-			int requestid = request_order_map.get(variável_da_thread);
-			if( !(requestid and request_map.containsKey(requestid)))  {
-				wait(request_order_map) ; 
-			}
-			else {
+		// while( true ) {
+		// 	int requestid = request_order_map.get(variável_da_thread);
+		// 	if( !(requestid and request_map.containsKey(requestid)))  {
+		// 		wait(request_order_map) ; 
+		// 	}
+		// 	else {
 
-				DadkvsMain.CommitRequest request = request_map.get(requestID) ;
+		// 		DadkvsMain.CommitRequest request = request_map.get(requestID) ;
 
-				int reqid = request.getReqid();
-				int key1 = request.getKey1();
-				int version1 = request.getVersion1();
-				int key2 = request.getKey2();
-				int version2 = request.getVersion2();
-				int writekey = request.getWritekey();
-				int writeval = request.getWriteval();
+		// 		int reqid = request.getReqid();
+		// 		int key1 = request.getKey1();
+		// 		int version1 = request.getVersion1();
+		// 		int key2 = request.getKey2();
+		// 		int version2 = request.getVersion2();
+		// 		int writekey = request.getWritekey();
+		// 		int writeval = request.getWriteval();
 
-				// for debug purposes
-				System.out.println("executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
+		// 		for debug purposes
+		// 		System.out.println("executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
 
-				this.timestamp++;
-				TransactionRecord txrecord = new TransactionRecord (request, version1, key2, version2, writekey, writeval, this.timestamp);
-				boolean result = this.server_state.store.commit (txrecord);
+		// 		this.timestamp++;
+		// 		TransactionRecord txrecord = new TransactionRecord (request, version1, key2, version2, writekey, writeval, this.timestamp);
+		// 		boolean result = this.server_state.store.commit (txrecord);
 				
-				// for debug purposes
-				System.out.println("Result is ready for request with reqid " + reqid);
+		// 		for debug purposes
+		// 		System.out.println("Result is ready for request with reqid " + reqid);
 				
-				DadkvsMain.CommitReply response =DadkvsMain.CommitReply.newBuilder()
-					.setReqid(reqid).setAck(result).build();
+		// 		DadkvsMain.CommitReply response =DadkvsMain.CommitReply.newBuilder()
+		// 			.setReqid(reqid).setAck(result).build();
 				
-				responseObserver.onNext(response);
-				responseObserver.onCompleted();
-			}
-		}
+		// 		responseObserver.onNext(response);
+		// 		responseObserver.onCompleted();
+		// 	}
+		// }
     }
 }
