@@ -48,10 +48,10 @@ public class DadkvsServer {
 
 	CommitHandler handler = new CommitHandler(request_map,request_ordered_map);
 
-	final BindableService service_impl = new DadkvsMainServiceImpl(server_state,request_map,handler);
+	final BindableService service_impl = new DadkvsMainServiceImpl(server_state,handler);
 	final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
 	final BindableService paxos_impl   = new DadkvsPaxosServiceImpl(server_state);
-	final BindableService step1_impl   = new DadkvsStep1ServiceImpl(server_state,request_ordered_map,handler);
+	final BindableService step1_impl   = new DadkvsStep1ServiceImpl(handler);
 	
 	// Create a new server to listen on port.
 	Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl).addService(step1_impl).build();

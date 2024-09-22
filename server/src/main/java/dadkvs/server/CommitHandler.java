@@ -49,13 +49,17 @@ public class CommitHandler {
 
 				this.requestsProcessed++;
 				TransactionRecord txrecord = new TransactionRecord (key1, version1, key2, version2, writekey, writeval, this.requestsProcessed);
-				boolean result = this.server_state.store.commit (txrecord);
+				
+                //ainda não se se o server state devia estar aqui não
+
+
+                //boolean result = this.server_state.store.commit (txrecord);
 				
                 // for debug purposes
                 System.out.println("Result is ready for request with reqid " + reqid);
                 
-                DadkvsMain.CommitReply response =DadkvsMain.CommitReply.newBuilder()
-                    .setReqid(reqid).setAck(result).build();
+                // DadkvsMain.CommitReply response =DadkvsMain.CommitReply.newBuilder()
+                //     .setReqid(reqid).setAck(result).build();
             }
         }
     }
