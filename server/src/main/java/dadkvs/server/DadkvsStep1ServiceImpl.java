@@ -14,10 +14,7 @@ public class DadkvsStep1ServiceImpl extends DadkvsStep1ServiceGrpc.DadkvsStep1Se
 
     }
 
-    
     // @Override
     // public void commitorder(DadkvsStep1.commitOrderRequest request, StreamObserver<DadkvsStep1.commitOrderReply> responseObserver) {
-        
     // }
 }
-

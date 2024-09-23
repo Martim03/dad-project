@@ -1,6 +1,7 @@
 package dadkvs.server;
 
 public class VersionedValue {
+
     private int value;
     private int version;
 
