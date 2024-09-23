@@ -37,6 +37,12 @@ The project is composed of three main components:
 - Clients
 - ConsoleClient
 
+To Run all the the required processes all at once with vscode:
+1. Cntrl+Shift+p
+2. Tasks: Run Task
+3. Run All Terminals
+4. (Choose whichever output option you wish)
+
 
 ## Servers
 
