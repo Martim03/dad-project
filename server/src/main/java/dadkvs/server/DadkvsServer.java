@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import dadkvs.DadkvsMain;
+import dadkvs.util.RequestArchive;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -23,7 +24,7 @@ public class DadkvsServer {
 
         System.out.println(DadkvsServer.class.getSimpleName());
 
-        Map<Integer, DadkvsMain.CommitRequest> request_map = new HashMap<>();
+        Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map = new HashMap<>();
         request_map = Collections.synchronizedMap(request_map);
 
         Map<Integer, Integer> request_ordered_map = new HashMap<>();

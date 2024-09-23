@@ -20,24 +20,21 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
-    int timestamp;
     CommitHandler commitHandler;
     int request_counter;
-    int server_number;
+    int num_servers;
     ManagedChannel[] channels;
     DadkvsStep1ServiceGrpc.DadkvsStep1ServiceStub[] async_stubs;
-    private ReadWriteLock rwLock = new ReentrantReadWriteLock();
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal lock?
 
     public DadkvsMainServiceImpl(DadkvsServerState state, CommitHandler handler) {
         this.server_state = state;
-        this.timestamp = 0;
         this.request_counter = 0;
         this.commitHandler = handler;
-        this.server_number = 4;
-        this.channels = new ManagedChannel[this.server_number];
-        this.async_stubs = new DadkvsStep1ServiceGrpc.DadkvsStep1ServiceStub[this.server_number];
-        startComms();
-
+        this.num_servers = 5; // TODO change this
+        this.channels = new ManagedChannel[this.num_servers];
+        this.async_stubs = new DadkvsStep1ServiceGrpc.DadkvsStep1ServiceStub[this.num_servers];
+        startComms(); // TODO move this outside of the constructor -> new Serivice().startComms()
     }
 
     @Override
@@ -72,30 +69,32 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         // for debug purposes
         System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
-        commitHandler.addRequest(request);
-
-        rwLock.writeLock().lock();
-        DadkvsStep1.commitOrderRequest.Builder commit_request;
-        try {
-            if (server_state.i_am_leader == true) {
-                commit_request = DadkvsStep1.commitOrderRequest.newBuilder();
-                commit_request.setReqid(reqid).setOrderNum(this.request_counter);
-            }
-            this.request_counter++;
-        } finally {
-            rwLock.writeLock().unlock();
-        }
+        commitHandler.addRequest(request, responseObserver);
 
         if (server_state.i_am_leader == true) {
-            //necessario criar os targets de port com host
+            System.out.println("I am the leader, sending commit order request");
+            DadkvsStep1.commitOrderRequest.Builder commit_request = DadkvsStep1.commitOrderRequest.newBuilder();
+
+            rwLock.writeLock().lock();
+            int currentOrder = -1;
+            try {
+                currentOrder = this.request_counter++;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
+
+            commit_request.setReqid(reqid).setOrderNum(currentOrder);
+
+            // TODO necessario criar os targets de port com host
             ArrayList<DadkvsStep1.commitOrderReply> commit_responses = new ArrayList<>();
-            GenericResponseCollector<DadkvsStep1.commitOrderReply> commit_collector = new GenericResponseCollector<>(commit_responses, this.server_number);
+            GenericResponseCollector<DadkvsStep1.commitOrderReply> commit_collector = new GenericResponseCollector<>(commit_responses, this.num_servers);
             CollectorStreamObserver<DadkvsStep1.commitOrderReply> commit_observer = new CollectorStreamObserver<>(commit_collector);
 
-            for (int i = 0; i < this.server_number; i++) {
+            for (int i = 0; i < this.num_servers; i++) {
                 this.async_stubs[i].commitorder(commit_request.build(), commit_observer);
+                System.out.println("Sending commit order request to server " + i + " with channel: " + async_stubs[i].getChannel().toString());
             }
-            commit_collector.waitForTarget(this.server_number);
+            commit_collector.waitForTarget(this.num_servers);
         }
     }
 
@@ -103,7 +102,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         String host = "localhost";
         int port = 8080;
 
-        for (int i = 0; i <= this.server_number; i++) {
+        for (int i = 0; i < this.num_servers; i++) {
             String target = host + ":" + Integer.toString(port + i);
             channels[i] = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
             async_stubs[i] = DadkvsStep1ServiceGrpc.newStub(channels[i]);

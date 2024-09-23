@@ -55,9 +55,7 @@ public class DadkvsClient {
         sequence_number = sequence_number + 1;
         int reqid = sequence_number * 100 + client_id;
         boolean result = false;
-
         DadkvsMain.CommitRequest.Builder commit_request = DadkvsMain.CommitRequest.newBuilder();
-
         commit_request.setReqid(reqid)
                 .setKey1(key1)
                 .setVersion1(key1_version)
@@ -78,6 +76,7 @@ public class DadkvsClient {
             CollectorStreamObserver<DadkvsMain.CommitReply> commit_observer = new CollectorStreamObserver<DadkvsMain.CommitReply>(commit_collector);
             async_stubs[i].committx(commit_request.build(), commit_observer);
         }
+       
         commit_collector.waitForTarget(responses_needed);
         if (commit_responses.size() >= responses_needed) {
             Iterator<DadkvsMain.CommitReply> commit_iterator = commit_responses.iterator();
@@ -99,10 +98,9 @@ public class DadkvsClient {
         sequence_number = sequence_number + 1;
         int reqid = sequence_number * 100 + client_id;
 
-        DadkvsMain.ReadRequest.Builder read_request = DadkvsMain.ReadRequest.newBuilder();;
-        ArrayList<DadkvsMain.ReadReply> read_responses = new ArrayList<DadkvsMain.ReadReply>();;
-        GenericResponseCollector<DadkvsMain.ReadReply> read_collector = new GenericResponseCollector<DadkvsMain.ReadReply>(read_responses, n_servers);;
-
+        DadkvsMain.ReadRequest.Builder read_request = DadkvsMain.ReadRequest.newBuilder();
+        ArrayList<DadkvsMain.ReadReply> read_responses = new ArrayList<DadkvsMain.ReadReply>();
+        GenericResponseCollector<DadkvsMain.ReadReply> read_collector = new GenericResponseCollector<DadkvsMain.ReadReply>(read_responses, n_servers);
         read_request.setReqid(reqid).setKey(key);
         for (int i = 0; i < n_servers; i++) {
             CollectorStreamObserver<DadkvsMain.ReadReply> read_observer = new CollectorStreamObserver<DadkvsMain.ReadReply>(read_collector);
@@ -192,8 +190,8 @@ public class DadkvsClient {
         } else {
             int id = Integer.parseInt(args[0]);
             if (id == 0) {
-                System.err.println("Client id=0 reserved for console, using client id=1!"); 
-            }else {
+                System.err.println("Client id=0 reserved for console, using client id=1!");
+            } else {
                 client_id = id;
             }
         }
@@ -218,36 +216,36 @@ public class DadkvsClient {
                     break;
                 case "--port":
                     if (option_parameter == null) {
-                        System.err.println("missing portnumber"); 
-                    }else {
+                        System.err.println("missing portnumber");
+                    } else {
                         port = Integer.parseInt(option_parameter);
                     }
                     break;
                 case "--host":
                     if (option_parameter == null) {
-                        System.err.println("missing hostname"); 
-                    }else {
+                        System.err.println("missing hostname");
+                    } else {
                         host = option_parameter;
                     }
                     break;
                 case "--range":
                     if (option_parameter == null) {
-                        System.err.println("missing keyrange"); 
-                    }else {
+                        System.err.println("missing keyrange");
+                    } else {
                         key_range = Integer.parseInt(option_parameter);
                     }
                     break;
                 case "--lenght":
                     if (option_parameter == null) {
-                        System.err.println("missing looplenght"); 
-                    }else {
+                        System.err.println("missing looplenght");
+                    } else {
                         loop_size = Integer.parseInt(option_parameter);
                     }
                     break;
                 case "--sleep":
                     if (option_parameter == null) {
-                        System.err.println("missing sleeprange"); 
-                    }else {
+                        System.err.println("missing sleeprange");
+                    } else {
                         sleep_range = Integer.parseInt(option_parameter);
                     }
                     break;
@@ -298,8 +296,8 @@ public class DadkvsClient {
                             int key = Integer.parseInt(parameter1);
                             VersionedValue kv_entry = doRead(key);
                             if (kv_entry != null) {
-                                System.out.println("did read " + key + " with value " + kv_entry.getValue() + " and version " + kv_entry.getVersion()); 
-                            }else {
+                                System.out.println("did read " + key + " with value " + kv_entry.getValue() + " and version " + kv_entry.getVersion());
+                            } else {
                                 System.out.println("failed to read " + key);
                             }
                         } catch (NumberFormatException e) {
@@ -317,14 +315,14 @@ public class DadkvsClient {
                             int read_key2 = Integer.parseInt(parameter2);
                             int write_key = Integer.parseInt(parameter3);
                             if (write_key == 0) {
-                                System.out.println("key 0 is reserverded for reconfiguration!"); 
-                            }else {
+                                System.out.println("key 0 is reserverded for reconfiguration!");
+                            } else {
                                 int write_value = rnd.nextInt(1000);
                                 VersionedValue kv_entry1 = doRead(read_key1);
                                 VersionedValue kv_entry2 = doRead(read_key2);
                                 if ((kv_entry1 != null) && (kv_entry2 != null)) {
-                                    doCommit(read_key1, kv_entry1.getVersion(), read_key2, kv_entry2.getVersion(), write_key, write_value); 
-                                }else {
+                                    doCommit(read_key1, kv_entry1.getVersion(), read_key2, kv_entry2.getVersion(), write_key, write_value);
+                                } else {
                                     System.out.println("failed to read keys");
                                 }
                             }
@@ -419,8 +417,8 @@ public class DadkvsClient {
         this.initComms();
 
         if (interactive_mode == false) {
-            doTransactions(); 
-        }else {
+            doTransactions();
+        } else {
             goInteractive();
         }
 

@@ -7,8 +7,6 @@ import io.grpc.stub.StreamObserver;
 
 public class DadkvsStep1ServiceImpl extends DadkvsStep1ServiceGrpc.DadkvsStep1ServiceImplBase {
 
-    DadkvsServerState server_state;
-    // int               timestamp;
     CommitHandler commitHandler;
 
     public DadkvsStep1ServiceImpl(CommitHandler handler) {
@@ -19,5 +17,16 @@ public class DadkvsStep1ServiceImpl extends DadkvsStep1ServiceGrpc.DadkvsStep1Se
     @Override
     public void commitorder(DadkvsStep1.commitOrderRequest request, StreamObserver<DadkvsStep1.commitOrderReply> responseObserver) {
 
+        int order = request.getOrderNum();
+        int reqid = request.getReqid();
+
+        System.out.println("Receiving commit order request: order " + order + " reqid " + reqid);
+
+        commitHandler.addOrderedRequest(order, reqid);
+
+        DadkvsStep1.commitOrderReply response = DadkvsStep1.commitOrderReply.newBuilder().build();
+
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 }

@@ -14,7 +14,7 @@ public class DadkvsServerState {
     public DadkvsServerState(int kv_size, int port, int myself) {
         base_port = port;
         my_id = myself;
-        i_am_leader = false;
+        i_am_leader = my_id == 1; // TODO change this
         debug_mode = 0;
         store_size = kv_size;
         store = new KeyValueStore(kv_size);
