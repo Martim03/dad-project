@@ -11,6 +11,7 @@ public class MainLoop implements Runnable {
         this.has_work = false;
     }
 
+    @Override
     public void run() {
         while (true) {
             this.doWork();

@@ -31,17 +31,12 @@ public class DadkvsServer {
 
         CommitHandler handler = new CommitHandler(request_map, request_ordered_map, server_state);
 
-        int base_port = Integer.valueOf(args[0]);
-        int my_id = Integer.valueOf(args[1]);
+        int base_port = Integer.parseInt(args[0]);
+        int my_id = Integer.parseInt(args[1]);
 
         server_state = new DadkvsServerState(kvsize, base_port, my_id);
 
         port = base_port + my_id;
-
-        Map<Integer, DadkvsMain.CommitRequest> request_map = new HashMap<>();
-        Map<Integer, Integer> request_ordered_map = new HashMap<>();
-
-        CommitHandler handler = new CommitHandler(request_map, request_ordered_map);
 
         final BindableService service_impl = new DadkvsMainServiceImpl(server_state, handler);
         final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
