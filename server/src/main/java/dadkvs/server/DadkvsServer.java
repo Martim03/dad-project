@@ -1,11 +1,10 @@
 package dadkvs.server;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
 import dadkvs.DadkvsMain;
-
-
-
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -44,9 +43,12 @@ public class DadkvsServer {
 	port = base_port + my_id;
 
 	Map<Integer, DadkvsMain.CommitRequest> request_map = new HashMap<>();
-	Map<Integer, Integer> request_ordered_map = new HashMap<>();
+	request_map = Collections.synchronizedMap(request_map);
 
-	CommitHandler handler = new CommitHandler(request_map,request_ordered_map);
+	Map<Integer, Integer> request_ordered_map = new HashMap<>();
+	request_ordered_map = Collections.synchronizedMap(request_ordered_map);
+
+	CommitHandler handler = new CommitHandler(request_map,request_ordered_map,server_state);
 
 	final BindableService service_impl = new DadkvsMainServiceImpl(server_state,handler);
 	final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);

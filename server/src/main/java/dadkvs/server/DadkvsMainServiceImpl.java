@@ -4,7 +4,8 @@ package dadkvs.server;
 // import java.awt.color.ICC_Profile;
 // import java.lang.classfile.instruction.ThrowInstruction;
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dadkvs.DadkvsMain;
 import dadkvs.DadkvsMainServiceGrpc;
@@ -20,12 +21,13 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     DadkvsServerState server_state;
     int               timestamp;
-	Map<Integer, DadkvsMain.CommitRequest> request_map ;
 	CommitHandler 	  commitHandler ;
 	int 			  request_counter;
 	int 			  server_number;
 	ManagedChannel[] channels;
     DadkvsStep1ServiceGrpc.DadkvsStep1ServiceStub[] async_stubs;
+	private ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
 
     
     public DadkvsMainServiceImpl(DadkvsServerState state, CommitHandler handler) {
@@ -37,6 +39,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		this.channels = new ManagedChannel[this.server_number];
 		this.async_stubs = new DadkvsStep1ServiceGrpc.DadkvsStep1ServiceStub[this.server_number];
 		startComms();
+		
 	}
 
     @Override
@@ -73,25 +76,28 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
 		commitHandler.addRequest(request);
 
+		rwLock.writeLock().lock();
+		DadkvsStep1.commitOrderRequest.Builder commit_request;
+		try {
+			if(server_state.i_am_leader == true){
+				commit_request = DadkvsStep1.commitOrderRequest.newBuilder();
+				commit_request.setReqid(reqid).setOrderNum(this.request_counter);
+			}
+			this.request_counter++;
+		} finally{
+			rwLock.writeLock().unlock();
+		}
+
 		if ( server_state.i_am_leader == true ) {
 			//necessario criar os targets de port com host
 			ArrayList<DadkvsStep1.commitOrderReply> commit_responses = new ArrayList<>();
 			GenericResponseCollector<DadkvsStep1.commitOrderReply> commit_collector = new GenericResponseCollector<> (commit_responses, this.server_number);
 			CollectorStreamObserver<DadkvsStep1.commitOrderReply> commit_observer = new CollectorStreamObserver<>(commit_collector);
 
-			//lock devia começar aqui
-			DadkvsStep1.commitOrderRequest.Builder commit_request = DadkvsStep1.commitOrderRequest.newBuilder();
-			commit_request.setReqid(reqid).setOrderNum(this.request_counter);
-			this.request_counter++;
-
-			//e acabar aqui para permitir aumentar o counter
-
 			for(int i = 0 ; i < this.server_number ; i++) {
 				this.async_stubs[i].commitorder(commit_request.build(), commit_observer);
 			}
 			commit_collector.waitForTarget(this.server_number);
-
-			
 		}
     }
 
