@@ -9,11 +9,13 @@ public class CommitHandler {
     int requestsProcessed;
     Map<Integer, DadkvsMain.CommitRequest> request_map;
     Map<Integer, Integer> request_order_map;
+    DadkvsServerState server_state;
 
-    public CommitHandler(Map<Integer, DadkvsMain.CommitRequest> request_map, Map<Integer, Integer> request_order_map) {
+    public CommitHandler(Map<Integer, DadkvsMain.CommitRequest> request_map, Map<Integer, Integer> request_order_map, DadkvsServerState state) {
         this.requestsProcessed = 0;
         this.request_map = request_map;
         this.request_order_map = request_order_map;
+        this.server_state = server_state;
     }
 
     public void addOrderedRequest(int order, int reqid) {
@@ -25,13 +27,23 @@ public class CommitHandler {
 
         request_map.put(request.getReqid(), request);
         handleCommits();
+
     }
 
     public void handleCommits() {
+
         while (true) {
             Integer requestid = request_order_map.get(this.requestsProcessed);
             if (!(requestid != null && request_map.containsKey(requestid))) {
-                continue; //isto somehow tem que estar sempre a correr até o servidor fazer outra cena
+
+                synchronized (this.request_order_map) {
+                    try {
+                        this.request_order_map.wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }; //isto somehow tem que estar sempre a correr até o servidor fazer outra cena
             } else {
 
                 DadkvsMain.CommitRequest request = request_map.get(requestid);
@@ -50,12 +62,13 @@ public class CommitHandler {
                 TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval, this.requestsProcessed);
 
                 //ainda não se se o server state devia estar aqui não
-                //boolean result = this.server_state.store.commit (txrecord);
+                boolean result = this.server_state.store.commit(txrecord);
+
                 // for debug purposes
                 System.out.println("Result is ready for request with reqid " + reqid);
 
-                // DadkvsMain.CommitReply response =DadkvsMain.CommitReply.newBuilder()
-                //     .setReqid(reqid).setAck(result).build();
+                DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
+                        .setReqid(reqid).setAck(result).build();
             }
         }
     }

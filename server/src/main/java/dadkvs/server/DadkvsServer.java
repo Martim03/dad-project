@@ -1,9 +1,10 @@
 package dadkvs.server;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import dadkvs.DadkvsMain;
 
+import dadkvs.DadkvsMain;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -22,18 +23,13 @@ public class DadkvsServer {
 
         System.out.println(DadkvsServer.class.getSimpleName());
 
-        // Print received arguments.
-        System.out.printf("Received %d arguments%n", args.length);
-        for (int i = 0; i < args.length; i++) {
-            System.out.printf("arg[%d] = %s%n", i, args[i]);
-        }
+        Map<Integer, DadkvsMain.CommitRequest> request_map = new HashMap<>();
+        request_map = Collections.synchronizedMap(request_map);
 
-        // Check arguments.
-        if (args.length < 2) {
-            System.err.println("Argument(s) missing!");
-            System.err.printf("Usage: java %s baseport replica-id%n", Server.class.getName());
-            return;
-        }
+        Map<Integer, Integer> request_ordered_map = new HashMap<>();
+        request_ordered_map = Collections.synchronizedMap(request_ordered_map);
+
+        CommitHandler handler = new CommitHandler(request_map, request_ordered_map, server_state);
 
         int base_port = Integer.valueOf(args[0]);
         int my_id = Integer.valueOf(args[1]);
