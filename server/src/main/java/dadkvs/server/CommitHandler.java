@@ -13,7 +13,8 @@ public class CommitHandler {
     Map<Integer, Integer> request_order_map;
     DadkvsServerState server_state;
 
-    public CommitHandler(Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map, Map<Integer, Integer> request_order_map, DadkvsServerState state) {
+    public CommitHandler(Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map,
+            Map<Integer, Integer> request_order_map, DadkvsServerState state) {
         this.requestsProcessed = 0;
         this.request_map = request_map;
         this.request_order_map = request_order_map;
@@ -51,20 +52,25 @@ public class CommitHandler {
         int writekey = request.getWritekey();
         int writeval = request.getWriteval();
 
-        System.out.println("executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
+        System.out.println("executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
+                + version2 + " wk " + writekey + " writeval " + writeval);
 
-        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval, this.requestsProcessed);
+        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
+                this.requestsProcessed);
 
-        // TODO ainda não sei se o server state devia estar aqui não
         boolean commit_success = this.server_state.store.commit(txrecord);
 
         if (commit_success == true) {
+            // clean the request from the maps
+            request_map.remove(reqid);
+            request_order_map.remove(this.requestsProcessed);
+
             this.requestsProcessed++;
-            // TODO removes from the maps
         }
 
         // for debug purposes
-        System.out.println("Commit was " + (commit_success ? "SUCCESSFUL" : "ABORTED") + " for request with reqid " + reqid);
+        System.out.println(
+                "Commit was " + (commit_success ? "SUCCESSFUL" : "ABORTED") + " for request with reqid " + reqid);
 
         DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
                 .setReqid(reqid).setAck(commit_success).build();
