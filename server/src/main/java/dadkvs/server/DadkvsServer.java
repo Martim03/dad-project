@@ -30,12 +30,12 @@ public class DadkvsServer {
         Map<Integer, Integer> request_ordered_map = new HashMap<>();
         request_ordered_map = Collections.synchronizedMap(request_ordered_map);
 
-        CommitHandler handler = new CommitHandler(request_map, request_ordered_map, server_state);
-
         int base_port = Integer.parseInt(args[0]);
         int my_id = Integer.parseInt(args[1]);
 
         server_state = new DadkvsServerState(kvsize, base_port, my_id);
+
+        CommitHandler handler = new CommitHandler(request_map, request_ordered_map, server_state);
 
         port = base_port + my_id;
 
@@ -45,7 +45,8 @@ public class DadkvsServer {
         final BindableService step1_impl = new DadkvsStep1ServiceImpl(handler);
 
         // Create a new server to listen on port.
-        Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl).addService(step1_impl).build();
+        Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl)
+                .addService(paxos_impl).addService(step1_impl).build();
         // Start the server.
         server.start();
         // Server threads are running in the background.

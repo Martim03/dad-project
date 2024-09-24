@@ -21,7 +21,7 @@ public class CommitHandler {
     }
 
     public void addOrderedRequest(int order, int reqid) {
-        request_order_map.put(reqid, order);
+        request_order_map.put(order, reqid);
         handleCommits();
     }
 
