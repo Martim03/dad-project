@@ -11,8 +11,6 @@ The project requires the following packages:
 - Maven 3.8.4
 - Protoc 3.12
 
- vim ~/.bashrc
- export JAVA_VERSION=17 (é a versão que achamos que deve ser)
 
 # Compiling
 
