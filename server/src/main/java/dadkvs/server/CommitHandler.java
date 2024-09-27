@@ -78,6 +78,9 @@ public class CommitHandler {
         StreamObserver<DadkvsMain.CommitReply> responseObserver = request_archive.getResponseObserver();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
+        if (commit_success) {
+            handleCommits();
+        }
     }
 
 }
