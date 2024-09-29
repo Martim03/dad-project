@@ -75,12 +75,29 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         if (server_state.i_am_leader == true) {
             System.out.println("I am the leader, sending commit order request");
+
+            /*
+             * TODO: New Paxos implementation logic
+             * 
+             * send phase1 request to all acceptor servers to prepare transaction
+             * check for the validity of the majority to see if it is safe to proceed for
+             * the commit
+             * send phase2 request to all acceptor servers with the value to commit (order
+             * number and req num)
+             * check for the replies and if the majority of the servers have accepted the
+             * value
+             * send learn request to ALL servers to inform the commit has been completed and
+             * its value, now they should commit the value to their local store
+             * 
+             */
+
             DadkvsStep1.commitOrderRequest.Builder commit_request = DadkvsStep1.commitOrderRequest.newBuilder();
 
             rwLock.writeLock().lock();
             int currentOrder = -1;
             try {
-                currentOrder = this.request_counter++;
+                currentOrder = this.request_counter++; // TODO separate the incramentation of the request counter, to
+                                                       // concern abotut the transactions that might "fail"
             } finally {
                 rwLock.writeLock().unlock();
             }
