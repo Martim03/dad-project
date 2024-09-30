@@ -1,6 +1,8 @@
 package dadkvs.server;
 
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dadkvs.DadkvsMain;
 import dadkvs.util.RequestArchive;
@@ -12,6 +14,8 @@ public class CommitHandler {
     Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map;
     Map<Integer, Integer> request_order_map;
     DadkvsServerState server_state;
+    private final ReadWriteLock rwLock; // TODO needs to be readWrite? or just normal lock?
+    private final ReadWriteLock handleCommitLock; // TODO needs to be readWrite? or just normal lock?
 
     public CommitHandler(Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map,
             Map<Integer, Integer> request_order_map, DadkvsServerState state) {
@@ -19,6 +23,10 @@ public class CommitHandler {
         this.request_map = request_map;
         this.request_order_map = request_order_map;
         this.server_state = state;
+        this.rwLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+                                                    // lock?
+        this.handleCommitLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+        // lock?
     }
 
     public void addOrderedRequest(int order, int reqid) {
@@ -35,49 +43,65 @@ public class CommitHandler {
 
     public void handleCommits() {
 
-        Integer requestid = request_order_map.get(this.requestsProcessed);
-        if (!(requestid != null && request_map.containsKey(requestid))) {
-            // skip if request is not ready to execute
-            return;
-        }
+        boolean commit_success = false;
 
-        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> request_archive = request_map.get(requestid);
-        DadkvsMain.CommitRequest request = request_archive.getRequest();
+        handleCommitLock.writeLock().lock(); // TODO check if the lock will work right after the first unlock
+        try {
 
-        int reqid = request.getReqid();
-        int key1 = request.getKey1();
-        int version1 = request.getVersion1();
-        int key2 = request.getKey2();
-        int version2 = request.getVersion2();
-        int writekey = request.getWritekey();
-        int writeval = request.getWriteval();
+            Integer requestid = request_order_map.get(this.requestsProcessed);
+            if (!(requestid != null && request_map.containsKey(requestid))) {
+                // skip if request is not ready to execute
+                return;
+            }
 
-        System.out.println("executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
-                + version2 + " wk " + writekey + " writeval " + writeval);
+            RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> request_archive = request_map
+                    .get(requestid);
+            DadkvsMain.CommitRequest request = request_archive.getRequest();
 
-        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
-                this.requestsProcessed);
+            int reqid = request.getReqid();
+            int key1 = request.getKey1();
+            int version1 = request.getVersion1();
+            int key2 = request.getKey2();
+            int version2 = request.getVersion2();
+            int writekey = request.getWritekey();
+            int writeval = request.getWriteval();
 
-        boolean commit_success = this.server_state.store.commit(txrecord);
+            System.out.println(
+                    "executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
+                            + version2 + " wk " + writekey + " writeval " + writeval);
 
-        if (commit_success == true) {
+            TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
+                    this.requestsProcessed);
+
+            commit_success = this.server_state.store.commit(txrecord);
+
             // clean the request from the maps
             request_map.remove(reqid);
             request_order_map.remove(this.requestsProcessed);
 
-            this.requestsProcessed++;
+            rwLock.writeLock().lock(); // TODO maybe this can be removed if the whole function is synchronized
+            try {
+                this.requestsProcessed++;
+
+            } finally {
+                rwLock.writeLock().unlock();
+            }
+
+            // for debug purposes
+            System.out.println(
+                    "Commit was " + (commit_success ? "SUCCESSFUL" : "ABORTED") + " for request with reqid " + reqid);
+
+            DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
+                    .setReqid(reqid).setAck(commit_success).build();
+
+            StreamObserver<DadkvsMain.CommitReply> responseObserver = request_archive.getResponseObserver();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+
+        } finally {
+            handleCommitLock.writeLock().unlock();
         }
 
-        // for debug purposes
-        System.out.println(
-                "Commit was " + (commit_success ? "SUCCESSFUL" : "ABORTED") + " for request with reqid " + reqid);
-
-        DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
-                .setReqid(reqid).setAck(commit_success).build();
-
-        StreamObserver<DadkvsMain.CommitReply> responseObserver = request_archive.getResponseObserver();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
         if (commit_success) {
             handleCommits();
         }
