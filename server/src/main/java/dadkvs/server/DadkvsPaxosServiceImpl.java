@@ -10,7 +10,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
     public DadkvsPaxosServiceImpl(DadkvsServerState state) {
         this.server_state = state;
-
     }
 
     @Override
@@ -18,6 +17,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
         // for debug purposes
         System.out.println("Receive phase1 request: " + request);
+
         /*
          * TODO
          * 
@@ -30,6 +30,9 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          * just reject the request if the server has already accepted a higher proposal
          * 
          */
+
+        DadkvsPaxos.PhaseOneReply.Builder phase1_reply = DadkvsPaxos.PhaseOneReply.newBuilder();
+        phase1_reply.setPhase1Config(0).setPhase1Index(this.request_counter).setPhase1Timestamp(this.my_id);
 
     }
 
