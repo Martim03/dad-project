@@ -28,11 +28,11 @@
 		<client.sleeprange>--sleep 5</client.sleeprange>
 		<client.loopsize>--lenght 30</client.loopsize>
 		<client.interactivemode>-i</client.interactivemode>
-		<server1.delay>--delay 1 0</server1.delay>
-		<server2.delay>--delay 2 0</server2.delay>
-		<server3.delay>--delay 3 0</server3.delay>
-		<server4.delay>--delay 4 0</server4.delay>
-		<server5.delay>--delay 5 0</server5.delay>
+		<server1.delay>--delay 0 0</server1.delay>
+		<server2.delay>--delay 1 0</server2.delay>
+		<server3.delay>--delay 2 0</server3.delay>
+		<server4.delay>--delay 3 0</server4.delay>
+		<server5.delay>--delay 4 0</server5.delay>
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - 

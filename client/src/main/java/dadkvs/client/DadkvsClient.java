@@ -90,8 +90,7 @@ public class DadkvsClient {
             CollectorStreamObserver<DadkvsMain.CommitReply> commit_observer = new CollectorStreamObserver<DadkvsMain.CommitReply>(
                     commit_collector);
             async_stubs[id].committx(commit_request.build(), commit_observer);
-            System.out.println("port = " + async_stubs[id].getChannel());
-            System.out.println("Sent commit request to server " + (id + 1) + " at " + java.time.LocalDateTime.now());
+            System.out.println("Sent commit request to server " + (id + 1) + "with channel " + async_stubs[id].getChannel() + " at " + java.time.LocalDateTime.now());
         }
 
         // to here
@@ -285,10 +284,10 @@ public class DadkvsClient {
                         try {
                             int server_id = Integer.parseInt(option_parts[1]);
                             int delay_value = Integer.parseInt(option_parts[2]);
-                            if (server_id < 1 || server_id > n_servers) {
+                            if (server_id < 0 || server_id > n_servers-1) {
                                 System.err.println("Invalid server_id. Must be between 1 and " + n_servers);
                             } else {
-                                delayer.setDelay(server_id - 1, delay_value); // server_id is 1-based 
+                                delayer.setDelay(server_id , delay_value); // server_id is 1-based 
                                 System.out.println("Set delay for server " + server_id + " to " + delay_value);
                             }
                         } catch (NumberFormatException e) {
