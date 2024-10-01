@@ -74,7 +74,7 @@
         {
             "label": "Client 1",
             "type": "shell",
-            "command": "mvn exec:java -Dexec.args='1 \"${server.host}\" \"${server.port}\" \"${client.keyrange}\" \"${client.sleeprange}\" \"${client.loopsize}\" \"${client.interactivemode}\"'",
+            "command": "mvn exec:java -Dexec.args='1 \"${server.host}\" \"${server.port}\" \"${client.keyrange}\" \"${client.sleeprange}\" \"${client.loopsize}\" \"${client.interactivemode}\" \"${server1.delay}\" \"--delay 2 5\" \"${server3.delay}\" \"${server4.delay}\" \"${server5.delay}\"'",
             "options": {
                 "cwd": "${workspaceFolder}/client"
             },
@@ -88,7 +88,7 @@
         {
             "label": "Client 2",
             "type": "shell",
-            "command": "mvn exec:java -Dexec.args='2 \"${server.host}\" \"${server.port}\" \"${client.keyrange}\" \"${client.sleeprange}\" \"${client.loopsize}\" \"${client.interactivemode}\"'",
+            "command": "mvn exec:java -Dexec.args='2 \"${server.host}\" \"${server.port}\" \"${client.keyrange}\" \"${client.sleeprange}\" \"${client.loopsize}\" \"${client.interactivemode}\" \"${server1.delay}\" \"${server2.delay}\" \"${server3.delay}\" \"${server4.delay}\" \"${server5.delay}\"'",
             "options": {
                 "cwd": "${workspaceFolder}/client"
             },

@@ -58,7 +58,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
 
         // for debug purposes
-        System.out.println("Receiving commit request:" + request);
+        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Receiving commit request at " + java.time.LocalDateTime.now() + ": " + request);
 
         int reqid = request.getReqid();
         int key1 = request.getKey1();
@@ -117,6 +117,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
             }
             commit_collector.waitForTarget(this.num_servers);
         }
+        System.out.println("CHEGUEI AO FIM!!!!!!");
     }
 
     public void startComms() {
