@@ -11,8 +11,6 @@ The project requires the following packages:
 - Maven 3.8.4
 - Protoc 3.12
 
- vim ~/.bashrc
- export JAVA_VERSION=17 (é a versão que achamos que deve ser)
 
 # Compiling
 
@@ -36,6 +34,12 @@ The project is composed of three main components:
 - Servers
 - Clients
 - ConsoleClient
+
+To Run all the the required processes all at once with vscode:
+1. Cntrl+Shift+p
+2. Tasks: Run Task
+3. Run All Terminals
+4. (Choose whichever output option you wish)
 
 
 ## Servers

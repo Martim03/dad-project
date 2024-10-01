@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "DadkvsServer",
+            "request": "launch",
+            "mainClass": "dadkvs.server.DadkvsServer",
+            "projectName": "dadkvs-server",
+            "args": [
+                "8080",
+                "1"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "DadkvsClient",
+            "request": "launch",
+            "mainClass": "dadkvs.client.DadkvsClient",
+            "projectName": "dadkvs-client"
+        },
+        {
+            "type": "java",
+            "name": "Debug (Launch) - Current File",
+            "request": "launch",
+            "mainClass": "DadkvsServer"
+        }
+    ]
+}
