@@ -167,7 +167,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public Boolean sendPhase2() {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
-        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id).setPhase2Value(commitHandler.getRequestByOrder(request_counter).);
+        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id).setPhase2Value(commitHandler.getRequestByOrder(request_counter).getReqId());
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> commit_collector = new GenericResponseCollector<>(
                 phase2_responses, this.num_servers);

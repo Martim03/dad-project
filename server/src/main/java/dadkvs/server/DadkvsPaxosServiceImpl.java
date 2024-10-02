@@ -14,6 +14,9 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         this.commitHandler = commitHandler;
     }
 
+    // TODO handle the cases where some requests might be delayed and not exist in
+    // the server yet
+
     @Override
     public void phaseone(DadkvsPaxos.PhaseOneRequest request,
             StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
@@ -32,12 +35,29 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          * just reject the request if the server has already accepted a higher proposal
          * 
          */
-
-        if (request.getPhase1Timestamp() < commitHandler.getRequestById(request.getPhase1Index()))
-
         DadkvsPaxos.PhaseOneReply.Builder phase1_reply = DadkvsPaxos.PhaseOneReply.newBuilder();
-        phase1_reply.setPhase1Config(0).setPhase1Index(this.request_counter).setPhase1Timestamp(this.my_id);
 
+        if (request.getPhase1Timestamp() < commitHandler.getRequestByOrder(request.getPhase1Index()).getReadTS()) {
+            // reject the request
+
+            phase1_reply.setPhase1Accepted(false);
+
+            responseObserver.onNext(phase1_reply.build());
+            responseObserver.onCompleted();
+            return;
+        }
+
+        // Update the readTS of the request
+        commitHandler.getRequestByOrder(request.getPhase1Index()).setReadTS(request.getPhase1Timestamp());
+
+        int writeTS = commitHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS();
+
+        phase1_reply.setPhase1Config(0).setPhase1Index(commitHandler.getRequestsProcessed())
+                .setPhase1Timestamp(writeTS).setPhase1Accepted(true)
+                .setPhase1Value(commitHandler.getRequestByOrder(request.getPhase1Index()).getReqId());
+
+        responseObserver.onNext(phase1_reply.build());
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -57,6 +77,25 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          * 
          */
 
+        DadkvsPaxos.PhaseTwoReply.Builder phase2_reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
+
+        if (request.getPhase2Timestamp() < commitHandler.getRequestByOrder(request.getPhase2Index()).getReadTS()) {
+            // reject the request
+
+            phase2_reply.setPhase2Accepted(false);
+
+            responseObserver.onNext(phase2_reply.build());
+            responseObserver.onCompleted();
+            return;
+        }
+
+        // Fix the requests order with the new index
+        commitHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value());
+
+        // Update the writeTS of the request
+        commitHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp());
+
+        phase2_reply.setPhase2Config(0).setPhase2Index(request.getPhase2Index()).setPhase2Accepted(true);
     }
 
     @Override
@@ -73,6 +112,19 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          * 
          */
 
+        // TODO no need to check for the leader ID because "learns" are never rejected
+
+        // Commit the transaction locally
+        commitHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue());
+        commitHandler.getRequestByOrder(request.getLearnindex()).setCommited(true);
+        commitHandler.handleCommits();
+
+        // Respond with OK
+        // TODO is it neceessary to set the request attributes?
+        DadkvsPaxos.LearnReply.Builder learn_reply = DadkvsPaxos.LearnReply.newBuilder();
+
+        responseObserver.onNext(learn_reply.build());
+        responseObserver.onCompleted();
     }
 
 }

@@ -18,7 +18,7 @@ public class CommitHandler {
     private final ReadWriteLock handleCommitLock; // TODO needs to be readWrite? or just normal lock?
     private int order = 0;
 
-    public void SwapRequestOrder(int order, int reqid) throws Exception {
+    public void SwapRequestOrder(int order, int reqid) {
         Integer reqidOrder = null;
 
         for (Map.Entry<Integer, Integer> entry : request_order_map.entrySet()) {
@@ -30,7 +30,12 @@ public class CommitHandler {
 
         if (reqidOrder == null) {
             System.out.println("Request ID not found in the map.");
-            throw new Exception("Request ID not found in the map.");
+            return;
+        }
+
+        if (order == reqidOrder) {
+            // skip swap if its already on the right place
+            return;
         }
 
         int temp = request_order_map.get(order);
@@ -52,12 +57,12 @@ public class CommitHandler {
 
     public void addRequest(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
         // TODO lock?
-        //init lock
+        // init lock
         int nextOrder = this.order++;
         // end lock
 
         request_order_map.put(nextOrder, request.getReqid());
-        request_map.put(request.getReqid(), new RequestArchive(request, responseObserver));
+        request_map.put(request.getReqid(), new RequestArchive(request, responseObserver, request.getReqid()));
         handleCommits();
     }
 
@@ -73,7 +78,7 @@ public class CommitHandler {
         try {
 
             Integer requestid = request_order_map.get(this.requestsProcessed);
-            if (!(requestid != null && request_map.containsKey(requestid))) {
+            if (!(requestid != null && request_map.containsKey(requestid)) && request_map.get(requestid).isCommited()) {
                 // skip if request is not ready to execute
                 return;
             }
@@ -92,7 +97,7 @@ public class CommitHandler {
 
             System.out.println(
                     "executing:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
-                    + version2 + " wk " + writekey + " writeval " + writeval);
+                            + version2 + " wk " + writekey + " writeval " + writeval);
 
             TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
                     this.requestsProcessed);
@@ -129,6 +134,10 @@ public class CommitHandler {
         if (commit_success) {
             handleCommits();
         }
+    }
+
+    public int getRequestsProcessed() {
+        return requestsProcessed;
     }
 
 }
