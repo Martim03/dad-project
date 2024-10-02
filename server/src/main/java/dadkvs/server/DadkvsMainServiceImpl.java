@@ -18,6 +18,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 // TODO servers aware of configuration and their roles
+
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
@@ -25,6 +26,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     int request_counter;
     int num_servers;
     int my_id;
+    int consecutive_refusals_count = 0;
     ManagedChannel[] channels;
     DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
@@ -61,7 +63,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
 
         // for debug purposes
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Receiving commit request at " + java.time.LocalDateTime.now() + ": " + request);
+        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Receiving commit request at "
+                + java.time.LocalDateTime.now() + ": " + request);
 
         int reqid = request.getReqid();
         int key1 = request.getKey1();
@@ -77,7 +80,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         commitHandler.addRequest(request, responseObserver);
 
         if (server_state.i_am_leader == true) {
-            System.out.println("I am the leader, sending commit order request");
+            System.out.println("I think i am the leader, starting paxos consensus");
 
             /*
              * TODO: New Paxos implementation logic
@@ -93,19 +96,26 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
              * its value, now they should commit the value to their local store
              * 
              */
-            sendPhase1();
-            sendPhase2();
-
-            rwLock.writeLock().lock();
-            int currentOrder = -1;
-            try {
-                currentOrder = this.request_counter + 1; // TODO separate the incramentation of the request counter, to
-                // concern abotut the transactions that might "fail"
-            } finally {
-                rwLock.writeLock().unlock();
+            if (server_state.my_id == 0) {
+                // if its the first leader skips phase 1
+                sendPhase2();
+            } else {
+                sendPhase1();
             }
+
+            /*
+             * TODO must increment request counter
+             * rwLock.writeLock().lock();
+             * try {
+             * this.request_counter++;
+             * //double llock this? this.consecutive_refusals_count = 0;
+             * }
+             * finally {
+             * rwLock.writeLock().unlock();
+             * }
+             */
         } else {
-            RequestTimeout();
+            requestTimeout();
         }
 
         System.out.println("CHEGUEI AO FIM!!!!!!");
@@ -122,15 +132,43 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
     }
 
-    public void RequestTimeout() {
-        // Timeout + random mini Timeout
-    }    
+    private void requestTimeout() {
+        // Does a Timeout + random mini Timeout
 
-    public void OnRefusal() {
+        try {
+            int timeout = 1000; // base timeout in milliseconds
+            int randomTimeout = (int) (Math.random() * 500); // random additional timeout
+            Thread.sleep(timeout + randomTimeout);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.out.println("Request timeout interrupted: " + e.getMessage());
+        }
+
+        server_state.i_am_leader = true;
+        sendPhase1();
+    }
+
+    private void exponentialTimeout(int attempt) {
+        try {
+            int timeout = 1000; // base timeout in milliseconds
+            int randomTimeout = (int) (Math.random() * 500); // random additional timeout
+            Thread.sleep(timeout + randomTimeout * (int) Math.pow(2, attempt));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.out.println("Request timeout interrupted: " + e.getMessage());
+        }
+    }
+
+    public void onRefusal() {
         server_state.i_am_leader = false;
         my_id += num_servers;
-        // Timeout exponencial
-        // checar se ta commited; se não -> voltar a tentar
+        exponentialTimeout(consecutive_refusals_count);
+
+        // TODO lock arround this
+        consecutive_refusals_count++;
+
+        // TODO checar se ta commited; se não -> voltar a tentar
+
         server_state.i_am_leader = true;
         sendPhase1();
     }
@@ -146,18 +184,18 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         for (int i = 0; i < this.num_servers; i++) {
             this.async_stubs[i].phaseone(phase1_request.build(), commit_observer);
-            System.out.println("Sending commit order request to server " + i + " with channel: "
-                    + async_stubs[i].getChannel().toString());
+            System.out.println("Sending Phase1 request to server " + i);
         }
 
         boolean success = true;
 
-        // wait on majority
+        // TODO wait on majority
+
         if (!success) {
-            OnRefusal();
+            onRefusal();
         } else {
-            //if all are null, choses own value
-            //else selects most recent value (highest writeTS)
+            // TODO if all are null, choses own value
+            // else selects most recent value (highest writeTS)
 
             sendPhase2();
         }
@@ -167,7 +205,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public Boolean sendPhase2() {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
-        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id).setPhase2Value(commitHandler.getRequestByOrder(request_counter).getReqId());
+        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id)
+                .setPhase2Value(commitHandler.getRequestByOrder(request_counter).getReqId()); // TODO remove request dependency 
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> commit_collector = new GenericResponseCollector<>(
                 phase2_responses, this.num_servers);
@@ -176,17 +215,16 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         for (int i = 0; i < this.num_servers; i++) {
             this.async_stubs[i].phasetwo(phase2_request.build(), commit_observer);
-            System.out.println("Sending commit order request to server " + i + " with channel: "
-                    + async_stubs[i].getChannel().toString());
+            System.out.println("Sending Phase2 request to server " + i);
         }
 
         boolean success = true;
 
         // TODO wait majority, and handle declines
         if (!success) {
-            OnRefusal();
+            onRefusal();
         } else {
-            //sendLearn();
+            // TODO sendLearn();
         }
 
         return success;
@@ -203,10 +241,9 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         for (int i = 0; i < this.num_servers; i++) {
             this.async_stubs[i].learn(learn_request.build(), commit_observer);
-            System.out.println("Sending commit order request to server " + i + " with channel: "
-                    + async_stubs[i].getChannel().toString());
+            System.out.println("Sending Learn request to server " + i);
         }
 
-        //TODO Do we need to wait??
+        // TODO Do we need to wait??
     }
 }

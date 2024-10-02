@@ -77,20 +77,12 @@ public class DadkvsClient {
         GenericResponseCollector<DadkvsMain.CommitReply> commit_collector = new GenericResponseCollector<DadkvsMain.CommitReply>(
                 commit_responses, n_servers);
 
-        // TODO here
-        /*
-         * for (int i = 0; i < n_servers; i++) {
-         * CollectorStreamObserver<DadkvsMain.CommitReply> commit_observer = new
-         * CollectorStreamObserver<DadkvsMain.CommitReply>(commit_collector);
-         * async_stubs[i].committx(commit_request.build(), commit_observer);
-         * }
-         */
-        
         for (Integer id : delayer) {
             CollectorStreamObserver<DadkvsMain.CommitReply> commit_observer = new CollectorStreamObserver<DadkvsMain.CommitReply>(
                     commit_collector);
             async_stubs[id].committx(commit_request.build(), commit_observer);
-            System.out.println("Sent commit request to server " + (id + 1) + "with channel " + async_stubs[id].getChannel() + " at " + java.time.LocalDateTime.now());
+            System.out.println("Sent commit request to server " + (id + 1) + "with channel "
+                    + async_stubs[id].getChannel() + " at " + java.time.LocalDateTime.now());
         }
 
         // to here
@@ -284,10 +276,10 @@ public class DadkvsClient {
                         try {
                             int server_id = Integer.parseInt(option_parts[1]);
                             int delay_value = Integer.parseInt(option_parts[2]);
-                            if (server_id < 0 || server_id > n_servers-1) {
+                            if (server_id < 0 || server_id > n_servers - 1) {
                                 System.err.println("Invalid server_id. Must be between 1 and " + n_servers);
                             } else {
-                                delayer.setDelay(server_id , delay_value); // server_id is 1-based 
+                                delayer.setDelay(server_id, delay_value); // server_id is 1-based
                                 System.out.println("Set delay for server " + server_id + " to " + delay_value);
                             }
                         } catch (NumberFormatException e) {

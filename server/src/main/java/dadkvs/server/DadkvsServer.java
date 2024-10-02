@@ -24,10 +24,10 @@ public class DadkvsServer {
 
         System.out.println(DadkvsServer.class.getSimpleName());
 
-        Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map = new HashMap<>();
+        Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map = new HashMap<>(); // TODO move this inside of CommitHandler
         request_map = Collections.synchronizedMap(request_map);
 
-        Map<Integer, Integer> request_ordered_map = new HashMap<>();
+        Map<Integer, Integer> request_ordered_map = new HashMap<>(); // TODO move this inside of CommitHandler
         request_ordered_map = Collections.synchronizedMap(request_ordered_map);
 
         int base_port = Integer.parseInt(args[0]);
@@ -42,11 +42,10 @@ public class DadkvsServer {
         final BindableService service_impl = new DadkvsMainServiceImpl(server_state,handler, my_id);
         final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
         final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state, handler);
-        final BindableService step1_impl = new DadkvsStep1ServiceImpl(handler);
-
+        
         // Create a new server to listen on port.
         Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl)
-                .addService(paxos_impl).addService(step1_impl).build();
+                .addService(paxos_impl).build();
         // Start the server.
         server.start();
         // Server threads are running in the background.

@@ -15,7 +15,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
     }
 
     // TODO handle the cases where some requests might be delayed and not exist in
-    // the server yet
+    // the server yet PAXOS must NOT depend on the REQUEST
 
     @Override
     public void phaseone(DadkvsPaxos.PhaseOneRequest request,
@@ -37,7 +37,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          */
         DadkvsPaxos.PhaseOneReply.Builder phase1_reply = DadkvsPaxos.PhaseOneReply.newBuilder();
 
-        if (request.getPhase1Timestamp() < commitHandler.getRequestByOrder(request.getPhase1Index()).getReadTS()) {
+        if (request.getPhase1Timestamp() < commitHandler.getRequestByOrder(request.getPhase1Index()).getReadTS()) { // TODO remove request dependency 
             // reject the request
 
             phase1_reply.setPhase1Accepted(false);
@@ -48,13 +48,13 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         }
 
         // Update the readTS of the request
-        commitHandler.getRequestByOrder(request.getPhase1Index()).setReadTS(request.getPhase1Timestamp());
+        commitHandler.getRequestByOrder(request.getPhase1Index()).setReadTS(request.getPhase1Timestamp()); // TODO remove request dependency 
 
-        int writeTS = commitHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS();
+        int writeTS = commitHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS(); // TODO remove request dependency 
 
         phase1_reply.setPhase1Config(0).setPhase1Index(commitHandler.getRequestsProcessed())
                 .setPhase1Timestamp(writeTS).setPhase1Accepted(true)
-                .setPhase1Value(commitHandler.getRequestByOrder(request.getPhase1Index()).getReqId());
+                .setPhase1Value(commitHandler.getRequestByOrder(request.getPhase1Index()).getReqId()); // TODO remove request dependency
 
         responseObserver.onNext(phase1_reply.build());
         responseObserver.onCompleted();
@@ -71,7 +71,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          * 
          * this is the request received from the leader to anounce the chosen value
          * so the server will respond with an OK if it hanst already accepted a higher
-         * proposal
+         * proposal and update the request order with the new index (but not commited)
          * OR
          * just reject the request if the server has already accepted a higher proposal
          * 
@@ -79,7 +79,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         DadkvsPaxos.PhaseTwoReply.Builder phase2_reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
 
-        if (request.getPhase2Timestamp() < commitHandler.getRequestByOrder(request.getPhase2Index()).getReadTS()) {
+        if (request.getPhase2Timestamp() < commitHandler.getRequestByOrder(request.getPhase2Index()).getReadTS()) { // TODO remove request dependency
             // reject the request
 
             phase2_reply.setPhase2Accepted(false);
@@ -90,10 +90,10 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         }
 
         // Fix the requests order with the new index
-        commitHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value());
+        commitHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value()); // TODO remove request dependency 
 
         // Update the writeTS of the request
-        commitHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp());
+        commitHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp()); // TODO remove request dependency
 
         phase2_reply.setPhase2Config(0).setPhase2Index(request.getPhase2Index()).setPhase2Accepted(true);
     }
@@ -115,8 +115,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         // TODO no need to check for the leader ID because "learns" are never rejected
 
         // Commit the transaction locally
-        commitHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue());
-        commitHandler.getRequestByOrder(request.getLearnindex()).setCommited(true);
+        commitHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue()); // TODO remove request dependency
+        commitHandler.getRequestByOrder(request.getLearnindex()).setCommited(true); // TODO remove request dependency
         commitHandler.handleCommits();
 
         // Respond with OK

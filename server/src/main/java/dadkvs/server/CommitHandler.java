@@ -8,15 +8,29 @@ import dadkvs.DadkvsMain;
 import dadkvs.util.RequestArchive;
 import io.grpc.stub.StreamObserver;
 
-public class CommitHandler {
+public class CommitHandler { // TODO change the class name to RequestHandler
 
     int requestsProcessed;
     Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map;
     Map<Integer, Integer> request_order_map;
     DadkvsServerState server_state;
-    private final ReadWriteLock rwLock; // TODO needs to be readWrite? or just normal lock?
-    private final ReadWriteLock handleCommitLock; // TODO needs to be readWrite? or just normal lock?
     private int order = 0;
+    private final ReadWriteLock requestsProcessedLock; // TODO needs to be readWrite? or just normal lock?
+    private final ReadWriteLock handleCommitLock; // TODO needs to be readWrite? or just normal lock?
+    private final ReadWriteLock orderLock;
+
+    public CommitHandler(Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map,
+            Map<Integer, Integer> request_order_map, DadkvsServerState state) {
+        this.requestsProcessed = 0;
+        this.request_map = request_map;
+        this.request_order_map = request_order_map;
+        this.server_state = state;
+        this.requestsProcessedLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+        // lock?
+        this.handleCommitLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+        // lock?
+        this.orderLock = new ReentrantReadWriteLock();
+    }
 
     public void SwapRequestOrder(int order, int reqid) {
         Integer reqidOrder = null;
@@ -43,23 +57,15 @@ public class CommitHandler {
         request_order_map.put(reqidOrder, temp);
     }
 
-    public CommitHandler(Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map,
-            Map<Integer, Integer> request_order_map, DadkvsServerState state) {
-        this.requestsProcessed = 0;
-        this.request_map = request_map;
-        this.request_order_map = request_order_map;
-        this.server_state = state;
-        this.rwLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
-        // lock?
-        this.handleCommitLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
-        // lock?
-    }
-
     public void addRequest(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
-        // TODO lock?
-        // init lock
-        int nextOrder = this.order++;
-        // end lock
+        int nextOrder = -1;
+
+        orderLock.writeLock().lock();
+        try {
+            nextOrder = this.order++;
+        } finally {
+            orderLock.writeLock().unlock();
+        }
 
         request_order_map.put(nextOrder, request.getReqid());
         request_map.put(request.getReqid(), new RequestArchive(request, responseObserver, request.getReqid()));
@@ -108,12 +114,13 @@ public class CommitHandler {
             request_map.remove(reqid);
             request_order_map.remove(this.requestsProcessed);
 
-            rwLock.writeLock().lock(); // TODO maybe this can be removed if the whole function is synchronized
+            requestsProcessedLock.writeLock().lock(); // TODO maybe this can be removed if the whole function is
+                                                      // synchronized
             try {
                 this.requestsProcessed++;
 
             } finally {
-                rwLock.writeLock().unlock();
+                requestsProcessedLock.writeLock().unlock();
             }
 
             // for debug purposes
