@@ -7,9 +7,11 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
 
     DadkvsServerState server_state;
+    CommitHandler commitHandler;
 
-    public DadkvsPaxosServiceImpl(DadkvsServerState state) {
+    public DadkvsPaxosServiceImpl(DadkvsServerState state, CommitHandler commitHandler) {
         this.server_state = state;
+        this.commitHandler = commitHandler;
     }
 
     @Override
@@ -30,6 +32,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          * just reject the request if the server has already accepted a higher proposal
          * 
          */
+
+        if (request.getPhase1Timestamp() < commitHandler.getRequestById(request.getPhase1Index()))
 
         DadkvsPaxos.PhaseOneReply.Builder phase1_reply = DadkvsPaxos.PhaseOneReply.newBuilder();
         phase1_reply.setPhase1Config(0).setPhase1Index(this.request_counter).setPhase1Timestamp(this.my_id);

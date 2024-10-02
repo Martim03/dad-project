@@ -41,7 +41,7 @@ public class DadkvsServer {
 
         final BindableService service_impl = new DadkvsMainServiceImpl(server_state,handler, my_id);
         final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
-        final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state,handler );
+        final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state, handler);
         final BindableService step1_impl = new DadkvsStep1ServiceImpl(handler);
 
         // Create a new server to listen on port.

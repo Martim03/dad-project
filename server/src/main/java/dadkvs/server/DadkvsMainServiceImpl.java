@@ -17,6 +17,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+// TODO servers aware of configuration and their roles
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
@@ -27,7 +28,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     ManagedChannel[] channels;
     DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
-                                                                       // lock?
+    // lock?
 
     public DadkvsMainServiceImpl(DadkvsServerState state, CommitHandler handler, int my_id) {
         this.server_state = state;
@@ -92,29 +93,21 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
              * its value, now they should commit the value to their local store
              * 
              */
-            
-
-            if( sendPhase1(reqid) == true) {
-                sendPhase2();
-
-            }
-
-            DadkvsPaxos.commitOrderRequest.Builder commit_request = DadkvsPaxos.commitOrderRequest.newBuilder();
+            sendPhase1();
+            sendPhase2();
 
             rwLock.writeLock().lock();
             int currentOrder = -1;
             try {
                 currentOrder = this.request_counter + 1; // TODO separate the incramentation of the request counter, to
-                                                       // concern abotut the transactions that might "fail"
+                // concern abotut the transactions that might "fail"
             } finally {
                 rwLock.writeLock().unlock();
             }
-
-            commit_request.setReqid(reqid).setOrderNum(currentOrder);
-
-           
-            
+        } else {
+            RequestTimeout();
         }
+
         System.out.println("CHEGUEI AO FIM!!!!!!");
     }
 
@@ -129,38 +122,25 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
     }
 
+    public void RequestTimeout() {
+        // Timeout + random mini Timeout
+    }    
 
-    public Boolean sendPhase1(int reqid){
-        DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
-        phase1_request.setPhase1Config(0).setPhase1Index(this.request_counter).setPhase1Timestamp(this.my_id);   //TODO: change timestamp to apropriate value if the leader fails
-        ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
-        GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
-                    phase1_responses, this.num_servers);
-        CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
-                commit_collector);
-
-        for (int i = 0; i < this.num_servers; i++) {
-            this.async_stubs[i].phaseone(phase1_request.build(), commit_observer);
-            System.out.println("Sending commit order request to server " + i + " with channel: "
-                    + async_stubs[i].getChannel().toString());
-        }
-
-        commit_collector.waitForTarget(this.num_servers);
-        int accepted = 0 ;
-        for (int i = 0; i < this.num_servers; i++) {
-            if(phase1_responses.get(0).getPhase1Accepted() == true) {
-                accepted++;
-            }
-        }
-        return accepted >= num_servers;
+    public void OnRefusal() {
+        server_state.i_am_leader = false;
+        my_id += num_servers;
+        // Timeout exponencial
+        // checar se ta commited; se não -> voltar a tentar
+        server_state.i_am_leader = true;
+        sendPhase1();
     }
 
-    public Boolean sendPhase2(){
-        DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
-        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id).;
+    public Boolean sendPhase1() {
+        DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
+        phase1_request.setPhase1Config(0).setPhase1Index(this.request_counter).setPhase1Timestamp(this.my_id);
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
-                    phase1_responses, this.num_servers);
+                phase1_responses, this.num_servers);
         CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
                 commit_collector);
 
@@ -169,5 +149,64 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
             System.out.println("Sending commit order request to server " + i + " with channel: "
                     + async_stubs[i].getChannel().toString());
         }
+
+        boolean success = true;
+
+        // wait on majority
+        if (!success) {
+            OnRefusal();
+        } else {
+            //if all are null, choses own value
+            //else selects most recent value (highest writeTS)
+
+            sendPhase2();
+        }
+
+        return success;
+    }
+
+    public Boolean sendPhase2() {
+        DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
+        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id).setPhase2Value(commitHandler.getRequestByOrder(request_counter).);
+        ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
+        GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> commit_collector = new GenericResponseCollector<>(
+                phase2_responses, this.num_servers);
+        CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> commit_observer = new CollectorStreamObserver<>(
+                commit_collector);
+
+        for (int i = 0; i < this.num_servers; i++) {
+            this.async_stubs[i].phasetwo(phase2_request.build(), commit_observer);
+            System.out.println("Sending commit order request to server " + i + " with channel: "
+                    + async_stubs[i].getChannel().toString());
+        }
+
+        boolean success = true;
+
+        // TODO wait majority, and handle declines
+        if (!success) {
+            OnRefusal();
+        } else {
+            //sendLearn();
+        }
+
+        return success;
+    }
+
+    public void sendLearn(int reqId) {
+        DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
+        learn_request.setLearnconfig(0).setLearnindex(request_counter).setLearnvalue(reqId).setLearntimestamp(my_id);
+        ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<>();
+        GenericResponseCollector<DadkvsPaxos.LearnReply> commit_collector = new GenericResponseCollector<>(
+                learn_responses, this.num_servers);
+        CollectorStreamObserver<DadkvsPaxos.LearnReply> commit_observer = new CollectorStreamObserver<>(
+                commit_collector);
+
+        for (int i = 0; i < this.num_servers; i++) {
+            this.async_stubs[i].learn(learn_request.build(), commit_observer);
+            System.out.println("Sending commit order request to server " + i + " with channel: "
+                    + async_stubs[i].getChannel().toString());
+        }
+
+        //TODO Do we need to wait??
     }
 }
