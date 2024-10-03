@@ -4,16 +4,16 @@ import io.grpc.stub.StreamObserver;
 
 public class RequestArchive<ReqT, RespT> {
 
-    private final ReqT request;
-    private final StreamObserver<RespT> responseObserver;
+    private ReqT request;
+    private StreamObserver<RespT> responseObserver;
     private final int reqId;
     private int writeTS;
     private int readTS;
     private boolean commited;
 
-    public RequestArchive(ReqT request, StreamObserver<RespT> responseObserver, int reqId) {
-        this.request = request;
-        this.responseObserver = responseObserver;
+    public RequestArchive(int reqId) {
+        this.request = null;
+        this.responseObserver = null;
         this.reqId = reqId;
         this.writeTS = 0;
         this.readTS = 0;
@@ -38,6 +38,14 @@ public class RequestArchive<ReqT, RespT> {
 
     public boolean isCommited() {
         return commited;
+    }
+
+    public void setRequest(ReqT request) {
+        this.request = request;
+    }
+
+    public void setResponseObserver(StreamObserver<RespT> responseObserver) {
+        this.responseObserver = responseObserver;
     }
 
     public void setWriteTS(int writeTS) {

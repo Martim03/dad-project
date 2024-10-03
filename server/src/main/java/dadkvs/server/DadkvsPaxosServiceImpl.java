@@ -24,8 +24,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         System.out.println("Receive phase1 request: " + request);
 
         /*
-         * TODO
-         * 
          * this is the request received from the leader to preppare the transaction
          * so the server will respond with the value of the highest accepted proposal
          * for the leader to understand
@@ -67,8 +65,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         System.out.println("Receive phase two request: " + request);
 
         /*
-         * TODO
-         * 
          * this is the request received from the leader to anounce the chosen value
          * so the server will respond with an OK if it hanst already accepted a higher
          * proposal and update the request order with the new index (but not commited)
@@ -104,15 +100,13 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         System.out.println("Receive learn request: " + request);
 
         /*
-         * TODO
-         * 
          * this is the request received from the leader to anounce the value to commit
          * so the server will take the chosen value and commit it to the store, it is
          * decided
          * 
          */
 
-        // TODO no need to check for the leader ID because "learns" are never rejected
+        // TODO no need to check for the leader ID because "learns" are never rejected?
 
         // Commit the transaction locally
         requestHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue()); // TODO remove request dependency

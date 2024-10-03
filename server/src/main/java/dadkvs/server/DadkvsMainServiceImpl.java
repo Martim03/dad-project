@@ -13,6 +13,8 @@ import dadkvs.DadkvsMain;
 import dadkvs.DadkvsMainServiceGrpc;
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
+import dadkvs.DadkvsPaxos.PhaseOneReply;
+import dadkvs.DadkvsPaxos.PhaseTwoReply;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 import io.grpc.ManagedChannel;
@@ -25,7 +27,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     DadkvsServerState server_state;
     RequestHandler requestHandler;
-    int request_counter;
     int num_servers;
     int my_id;
     ManagedChannel[] channels;
@@ -33,13 +34,12 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     private final Lock requestCounterLock = new ReentrantLock();
     private final Lock expOrderAttemptLock = new ReentrantLock();
     int attempt = 0;
-    int orderAttempted = request_counter;
+    int orderAttempted = requestHandler.getRequestsProcessed();
     // lock?
 
     public DadkvsMainServiceImpl(DadkvsServerState state, RequestHandler handler, int my_id) {
         this.server_state = state;
         this.my_id = my_id;
-        this.request_counter = 0;
         this.requestHandler = handler;
         this.num_servers = 5;
         this.channels = new ManagedChannel[this.num_servers];
@@ -86,9 +86,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         if (server_state.i_am_leader == true) {
             System.out.println("I think i am the leader, starting paxos consensus");
 
-            /*
-             * TODO: New Paxos implementation logic
-             * 
+            /* 
              * send phase1 request to all acceptor servers to prepare transaction
              * check for the validity of the majority to see if it is safe to proceed for
              * the commit
@@ -100,6 +98,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
              * its value, now they should commit the value to their local store
              * 
              */
+
             if (server_state.my_id == 0) {
                 // if its the first leader skips phase 1
                 sendPhase2();
@@ -107,17 +106,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
                 sendPhase1();
             }
 
-            /*
-             * TODO must increment request counter
-             * rwLock.writeLock().lock();
-             * try {
-             * this.request_counter++;
-             * //double llock this? this.consecutive_refusals_count = 0;
-             * }
-             * finally {
-             * rwLock.writeLock().unlock();
-             * }
-             */
         } else {
             requestTimeout();
         }
@@ -154,12 +142,11 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     private void exponentialTimeout() {
         expOrderAttemptLock.lock();
-        if (request_counter == orderAttempted) {
+        if (requestHandler.getRequestsProcessed() == orderAttempted) {
             attempt++;
-        }
-        else {
+        } else {
             attempt = 0;
-            orderAttempted = request_counter;
+            orderAttempted = requestHandler.getRequestsProcessed();
         }
         expOrderAttemptLock.unlock();
 
@@ -173,20 +160,26 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
     }
 
-    public void onRefusal() {
+    public void onRefusal() { // TODO Watchout for recursive calls with sendPhase1() (not enough space)
         server_state.i_am_leader = false;
         my_id += num_servers;
         exponentialTimeout();
 
-        // TODO checar se ta commited; se não -> voltar a tentar
+        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) { // TODO remove request dependecy
+            return;
+        }
 
         server_state.i_am_leader = true;
         sendPhase1();
     }
 
-    public Boolean sendPhase1() {
+    public void WaitForMajority(GenericResponseCollector responseCollector) {
+        responseCollector.waitForTarget((num_servers / 2) + 1);
+    }
+
+    public void sendPhase1() {
         DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
-        phase1_request.setPhase1Config(0).setPhase1Index(this.request_counter).setPhase1Timestamp(this.my_id);
+        phase1_request.setPhase1Config(0).setPhase1Index(this.requestHandler.getRequestsProcessed()).setPhase1Timestamp(this.my_id);
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
                 phase1_responses, this.num_servers);
@@ -199,25 +192,39 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
 
         boolean success = true;
-
-        // TODO wait on majority
+        Integer latestValue = null;
+        int highestWriteTS = 0;
+        WaitForMajority((commit_collector));
+        for (PhaseOneReply phaseOneReply : phase1_responses) {
+            if (!phaseOneReply.getPhase1Accepted()) {
+                // there is a new leader with higher ID, abort!
+                success = false;
+                break;
+            }
+            if (phaseOneReply.getPhase1Timestamp() > highestWriteTS) {
+                highestWriteTS = phaseOneReply.getPhase1Timestamp();
+                latestValue = phaseOneReply.getPhase1Value();
+            }
+        }
 
         if (!success) {
             onRefusal();
         } else {
-            // TODO if all are null, choses own value
+            // if all are null, choses own value
             // else selects most recent value (highest writeTS)
+
+            if (latestValue != null) {
+                requestHandler.SwapRequestOrder(requestHandler.getRequestsProcessed(), latestValue);
+            }
 
             sendPhase2();
         }
-
-        return success;
     }
 
-    public Boolean sendPhase2() {
+    public void sendPhase2() {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
-        phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id)
-                .setPhase2Value(requestHandler.getRequestByOrder(request_counter).getReqId()); // TODO remove request dependency 
+        phase2_request.setPhase2Config(0).setPhase2Index(requestHandler.getRequestsProcessed()).setPhase2Timestamp(this.my_id)
+                .setPhase2Value(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId()); // TODO remove request dependency                                                       
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> commit_collector = new GenericResponseCollector<>(
                 phase2_responses, this.num_servers);
@@ -230,20 +237,26 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
 
         boolean success = true;
+        WaitForMajority((commit_collector));
+        for (PhaseTwoReply phaseTwoReply : phase2_responses) {
+            if (!phaseTwoReply.getPhase2Accepted()) {
+                // there is a new leader with higher ID, abort!
+                success = false;
+                break;
+            }
+        }
 
-        // TODO wait majority, and handle declines
         if (!success) {
             onRefusal();
         } else {
-            // TODO sendLearn();
+            sendLearn();
         }
-
-        return success;
     }
 
-    public void sendLearn(int reqId) {
+    public void sendLearn() {
         DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
-        learn_request.setLearnconfig(0).setLearnindex(request_counter).setLearnvalue(reqId).setLearntimestamp(my_id);
+        learn_request.setLearnconfig(0).setLearnindex(requestHandler.getRequestsProcessed())
+                .setLearnvalue(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId()).setLearntimestamp(my_id);
         ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.LearnReply> commit_collector = new GenericResponseCollector<>(
                 learn_responses, this.num_servers);
