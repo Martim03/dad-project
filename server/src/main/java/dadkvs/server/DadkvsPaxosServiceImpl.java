@@ -7,11 +7,11 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
 
     DadkvsServerState server_state;
-    CommitHandler commitHandler;
+    RequestHandler requestHandler;
 
-    public DadkvsPaxosServiceImpl(DadkvsServerState state, CommitHandler commitHandler) {
+    public DadkvsPaxosServiceImpl(DadkvsServerState state, RequestHandler requestHandler) {
         this.server_state = state;
-        this.commitHandler = commitHandler;
+        this.requestHandler = requestHandler;
     }
 
     // TODO handle the cases where some requests might be delayed and not exist in
@@ -37,7 +37,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
          */
         DadkvsPaxos.PhaseOneReply.Builder phase1_reply = DadkvsPaxos.PhaseOneReply.newBuilder();
 
-        if (request.getPhase1Timestamp() < commitHandler.getRequestByOrder(request.getPhase1Index()).getReadTS()) { // TODO remove request dependency 
+        if (request.getPhase1Timestamp() < requestHandler.getRequestByOrder(request.getPhase1Index()).getReadTS()) { // TODO remove request dependency 
             // reject the request
 
             phase1_reply.setPhase1Accepted(false);
@@ -48,13 +48,13 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         }
 
         // Update the readTS of the request
-        commitHandler.getRequestByOrder(request.getPhase1Index()).setReadTS(request.getPhase1Timestamp()); // TODO remove request dependency 
+        requestHandler.getRequestByOrder(request.getPhase1Index()).setReadTS(request.getPhase1Timestamp()); // TODO remove request dependency 
 
-        int writeTS = commitHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS(); // TODO remove request dependency 
+        int writeTS = requestHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS(); // TODO remove request dependency 
 
-        phase1_reply.setPhase1Config(0).setPhase1Index(commitHandler.getRequestsProcessed())
+        phase1_reply.setPhase1Config(0).setPhase1Index(requestHandler.getRequestsProcessed())
                 .setPhase1Timestamp(writeTS).setPhase1Accepted(true)
-                .setPhase1Value(commitHandler.getRequestByOrder(request.getPhase1Index()).getReqId()); // TODO remove request dependency
+                .setPhase1Value(requestHandler.getRequestByOrder(request.getPhase1Index()).getReqId()); // TODO remove request dependency
 
         responseObserver.onNext(phase1_reply.build());
         responseObserver.onCompleted();
@@ -79,7 +79,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         DadkvsPaxos.PhaseTwoReply.Builder phase2_reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
 
-        if (request.getPhase2Timestamp() < commitHandler.getRequestByOrder(request.getPhase2Index()).getReadTS()) { // TODO remove request dependency
+        if (request.getPhase2Timestamp() < requestHandler.getRequestByOrder(request.getPhase2Index()).getReadTS()) { // TODO remove request dependency
             // reject the request
 
             phase2_reply.setPhase2Accepted(false);
@@ -90,10 +90,10 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         }
 
         // Fix the requests order with the new index
-        commitHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value()); // TODO remove request dependency 
+        requestHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value()); // TODO remove request dependency 
 
         // Update the writeTS of the request
-        commitHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp()); // TODO remove request dependency
+        requestHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp()); // TODO remove request dependency
 
         phase2_reply.setPhase2Config(0).setPhase2Index(request.getPhase2Index()).setPhase2Accepted(true);
     }
@@ -115,9 +115,9 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         // TODO no need to check for the leader ID because "learns" are never rejected
 
         // Commit the transaction locally
-        commitHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue()); // TODO remove request dependency
-        commitHandler.getRequestByOrder(request.getLearnindex()).setCommited(true); // TODO remove request dependency
-        commitHandler.handleCommits();
+        requestHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue()); // TODO remove request dependency
+        requestHandler.getRequestByOrder(request.getLearnindex()).setCommited(true); // TODO remove request dependency
+        requestHandler.handleCommits();
 
         // Respond with OK
         // TODO is it neceessary to set the request attributes?

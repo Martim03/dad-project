@@ -4,7 +4,9 @@ package dadkvs.server;
 // import java.awt.color.ICC_Profile;
 // import java.lang.classfile.instruction.ThrowInstruction;
 import java.util.ArrayList;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dadkvs.DadkvsMain;
@@ -22,21 +24,23 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
-    CommitHandler commitHandler;
+    RequestHandler requestHandler;
     int request_counter;
     int num_servers;
     int my_id;
-    int consecutive_refusals_count = 0;
     ManagedChannel[] channels;
     DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
-    private final ReadWriteLock rwLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+    private final Lock requestCounterLock = new ReentrantLock();
+    private final Lock expOrderAttemptLock = new ReentrantLock();
+    int attempt = 0;
+    int orderAttempted = request_counter;
     // lock?
 
-    public DadkvsMainServiceImpl(DadkvsServerState state, CommitHandler handler, int my_id) {
+    public DadkvsMainServiceImpl(DadkvsServerState state, RequestHandler handler, int my_id) {
         this.server_state = state;
         this.my_id = my_id;
         this.request_counter = 0;
-        this.commitHandler = handler;
+        this.requestHandler = handler;
         this.num_servers = 5;
         this.channels = new ManagedChannel[this.num_servers];
         this.async_stubs = new DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[this.num_servers];
@@ -77,7 +81,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // for debug purposes
         System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
                 + version2 + " wk " + writekey + " writeval " + writeval);
-        commitHandler.addRequest(request, responseObserver);
+        requestHandler.addRequest(request, responseObserver);
 
         if (server_state.i_am_leader == true) {
             System.out.println("I think i am the leader, starting paxos consensus");
@@ -148,7 +152,17 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         sendPhase1();
     }
 
-    private void exponentialTimeout(int attempt) {
+    private void exponentialTimeout() {
+        expOrderAttemptLock.lock();
+        if (request_counter == orderAttempted) {
+            attempt++;
+        }
+        else {
+            attempt = 0;
+            orderAttempted = request_counter;
+        }
+        expOrderAttemptLock.unlock();
+
         try {
             int timeout = 1000; // base timeout in milliseconds
             int randomTimeout = (int) (Math.random() * 500); // random additional timeout
@@ -162,10 +176,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public void onRefusal() {
         server_state.i_am_leader = false;
         my_id += num_servers;
-        exponentialTimeout(consecutive_refusals_count);
-
-        // TODO lock arround this
-        consecutive_refusals_count++;
+        exponentialTimeout();
 
         // TODO checar se ta commited; se não -> voltar a tentar
 
@@ -206,7 +217,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public Boolean sendPhase2() {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
         phase2_request.setPhase2Config(0).setPhase2Index(this.request_counter).setPhase2Timestamp(this.my_id)
-                .setPhase2Value(commitHandler.getRequestByOrder(request_counter).getReqId()); // TODO remove request dependency 
+                .setPhase2Value(requestHandler.getRequestByOrder(request_counter).getReqId()); // TODO remove request dependency 
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> commit_collector = new GenericResponseCollector<>(
                 phase2_responses, this.num_servers);

@@ -24,18 +24,12 @@ public class DadkvsServer {
 
         System.out.println(DadkvsServer.class.getSimpleName());
 
-        Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map = new HashMap<>(); // TODO move this inside of CommitHandler
-        request_map = Collections.synchronizedMap(request_map);
-
-        Map<Integer, Integer> request_ordered_map = new HashMap<>(); // TODO move this inside of CommitHandler
-        request_ordered_map = Collections.synchronizedMap(request_ordered_map);
-
         int base_port = Integer.parseInt(args[0]);
         int my_id = Integer.parseInt(args[1]);
 
         server_state = new DadkvsServerState(kvsize, base_port, my_id);
 
-        CommitHandler handler = new CommitHandler(request_map, request_ordered_map, server_state);
+        RequestHandler handler = new RequestHandler(server_state);
 
         port = base_port + my_id;
 

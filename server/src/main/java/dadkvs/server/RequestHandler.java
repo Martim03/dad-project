@@ -1,35 +1,40 @@
 package dadkvs.server;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dadkvs.DadkvsMain;
 import dadkvs.util.RequestArchive;
 import io.grpc.stub.StreamObserver;
 
-public class CommitHandler { // TODO change the class name to RequestHandler
+public class RequestHandler {
 
     int requestsProcessed;
     Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map;
     Map<Integer, Integer> request_order_map;
     DadkvsServerState server_state;
     private int order = 0;
-    private final ReadWriteLock requestsProcessedLock; // TODO needs to be readWrite? or just normal lock?
-    private final ReadWriteLock handleCommitLock; // TODO needs to be readWrite? or just normal lock?
-    private final ReadWriteLock orderLock;
+    private final Lock requestsProcessedLock;
+    private final Lock handleCommitLock;
+    private final Lock orderLock;
 
-    public CommitHandler(Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map,
-            Map<Integer, Integer> request_order_map, DadkvsServerState state) {
+    public RequestHandler(DadkvsServerState state) {
         this.requestsProcessed = 0;
-        this.request_map = request_map;
-        this.request_order_map = request_order_map;
+        this.request_map = new HashMap<>();
+        this.request_map = Collections.synchronizedMap(this.request_map);
+        this.request_order_map = new HashMap<>();
+        this.request_order_map = Collections.synchronizedMap(this.request_order_map);
         this.server_state = state;
-        this.requestsProcessedLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+        this.requestsProcessedLock = new ReentrantLock();
         // lock?
-        this.handleCommitLock = new ReentrantReadWriteLock(); // TODO needs to be readWrite? or just normal
+        this.handleCommitLock = new ReentrantLock();
         // lock?
-        this.orderLock = new ReentrantReadWriteLock();
+        this.orderLock = new ReentrantLock();
     }
 
     public void SwapRequestOrder(int order, int reqid) {
@@ -60,11 +65,11 @@ public class CommitHandler { // TODO change the class name to RequestHandler
     public void addRequest(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
         int nextOrder = -1;
 
-        orderLock.writeLock().lock();
+        orderLock.lock();
         try {
             nextOrder = this.order++;
         } finally {
-            orderLock.writeLock().unlock();
+            orderLock.unlock();
         }
 
         request_order_map.put(nextOrder, request.getReqid());
@@ -80,7 +85,7 @@ public class CommitHandler { // TODO change the class name to RequestHandler
 
         boolean commit_success = false;
 
-        handleCommitLock.writeLock().lock(); // TODO check if the lock will work right after the first unlock
+        handleCommitLock.lock(); // TODO check if the lock will work right after the first unlock
         try {
 
             Integer requestid = request_order_map.get(this.requestsProcessed);
@@ -114,13 +119,13 @@ public class CommitHandler { // TODO change the class name to RequestHandler
             request_map.remove(reqid);
             request_order_map.remove(this.requestsProcessed);
 
-            requestsProcessedLock.writeLock().lock(); // TODO maybe this can be removed if the whole function is
+            requestsProcessedLock.lock(); // TODO maybe this can be removed if the whole function is
                                                       // synchronized
             try {
                 this.requestsProcessed++;
 
             } finally {
-                requestsProcessedLock.writeLock().unlock();
+                requestsProcessedLock.unlock();
             }
 
             // for debug purposes
@@ -135,7 +140,7 @@ public class CommitHandler { // TODO change the class name to RequestHandler
             responseObserver.onCompleted();
 
         } finally {
-            handleCommitLock.writeLock().unlock();
+            handleCommitLock.unlock();
         }
 
         if (commit_success) {
@@ -147,4 +152,7 @@ public class CommitHandler { // TODO change the class name to RequestHandler
         return requestsProcessed;
     }
 
+    public int getCurrentOder() {
+        return order;
+    }
 }
