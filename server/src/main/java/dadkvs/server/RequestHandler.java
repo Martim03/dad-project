@@ -4,22 +4,18 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dadkvs.DadkvsMain;
-import dadkvs.DadkvsMain.CommitReply;
-import dadkvs.DadkvsMain.CommitRequest;
 import dadkvs.util.RequestArchive;
 import io.grpc.stub.StreamObserver;
 
 public class RequestHandler {
     // TODO check for request concureency!!
+    // TODO add lookup map by reqId for optimization
 
     int requestsProcessed;
-    Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_map;
-    Map<Integer, Integer> request_order_map;
+    Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_order_map;
     DadkvsServerState server_state;
     private int order = 0;
     private final Lock requestsProcessedLock;
@@ -29,8 +25,6 @@ public class RequestHandler {
 
     public RequestHandler(DadkvsServerState state) {
         this.requestsProcessed = 0;
-        this.request_map = new HashMap<>();
-        this.request_map = Collections.synchronizedMap(this.request_map);
         this.request_order_map = new HashMap<>();
         this.request_order_map = Collections.synchronizedMap(this.request_order_map);
         this.server_state = state;
@@ -42,8 +36,9 @@ public class RequestHandler {
     public void SwapRequestOrder(int order, int reqid) {
         Integer reqidOrder = null;
 
-        for (Map.Entry<Integer, Integer> entry : request_order_map.entrySet()) {
-            if (entry.getValue() == reqid) {
+        for (Map.Entry<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> entry : request_order_map
+                .entrySet()) {
+            if (entry.getValue().getReqId() == reqid) {
                 reqidOrder = entry.getKey();
                 break;
             }
@@ -52,10 +47,7 @@ public class RequestHandler {
         if (reqidOrder == null) {
             // if not found it is assumed as the last request to arrive (order)
             reqidOrder = order;
-
-            // add empty requestArchive
-            request_map.put(reqid, new RequestArchive<>(reqid));
-            //TODO use a new AddRequest (order_map) to ensure thread safety
+            addEmptyRequest().setReqId(reqid); // TODO can it be empty and have  a reqID?????
         }
 
         if (order == reqidOrder) {
@@ -63,12 +55,13 @@ public class RequestHandler {
             return;
         }
 
-        int temp = request_order_map.get(order);
-        request_order_map.put(order, reqid);
+        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> temp = request_order_map.get(order);
+        request_order_map.put(order, getRequestById(reqid));
         request_order_map.put(reqidOrder, temp);
     }
 
-    public void addRequest(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
+    //TODO FOR SURE DA PARA DAR REFACTOR NISTO
+    public int GetIncrementOrder() {
         int nextOrder = -1;
 
         orderLock.lock();
@@ -78,19 +71,59 @@ public class RequestHandler {
             orderLock.unlock();
         }
 
-        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive;
+        return nextOrder;
+    }
 
-        if ((reqArchive = request_map.get(request.getReqid())) == null) {
-            reqArchive = new RequestArchive<>(request.getReqid());
-            request_map.put(request.getReqid(), reqArchive);
-            //TODO Tem de ser posto no order_map na posição "asseguir"
-            //TODO se já la existe um empty, apenas preencher
+    public int getOrder() {
+        int nextOrder = -1;
+
+        orderLock.lock();
+        try {
+            nextOrder = this.order;
+        } finally {
+            orderLock.unlock();
         }
 
-        
-        request_order_map.put(nextOrder, request.getReqid());
-        reqArchive.setRequest(request);
-        reqArchive.setResponseObserver(responseObserver);
+        return nextOrder;
+    }
+
+    public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> addRequest() {
+        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = new RequestArchive<>();
+
+        request_order_map.put(GetIncrementOrder(), reqArchive);
+        return reqArchive;
+    }
+
+    public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> addEmptyRequest() {
+        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = new RequestArchive<>();
+
+        request_order_map.put(getOrder(), reqArchive);
+        return reqArchive;
+    }
+
+    public void registerClientRequest(DadkvsMain.CommitRequest request,
+            StreamObserver<DadkvsMain.CommitReply> responseObserver) {
+        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = getRequestById(
+                request.getReqid());
+
+        if (reqArchive == null) {
+            // Didnt find request with reqId
+
+            reqArchive = request_order_map.get(requestsProcessed);
+            if (reqArchive == null) {
+                // request in the current order does not exist
+
+                addRequest().setReqId(request.getReqid()).setRequest(request).setResponseObserver(responseObserver);
+            } else {
+                // exists but its empty, so we'll fill the values
+
+                reqArchive.setReqId(request.getReqid()).setRequest(request).setResponseObserver(responseObserver);
+                GetIncrementOrder(); // It was empty before, now it has a reqId so it counts as a new
+            }
+        } else {
+            // Found request with redId, so we'll fill the values
+            reqArchive.setRequest(request).setResponseObserver(responseObserver);
+        }
 
         handleCommits();
     }
@@ -102,16 +135,15 @@ public class RequestHandler {
         handleCommitLock.lock(); // TODO check if the lock will work right after the first unlock
         try {
 
-            Integer requestid = request_order_map.get(this.requestsProcessed);
-            if (!(requestid != null && request_map.containsKey(requestid)) && (request_map.get(requestid).isCommited())
-                    && (request_map.get(requestid).getRequest() != null)) {
+            RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = request_order_map
+                    .get(this.requestsProcessed);
+            if (!((reqArchive != null) && (reqArchive.getReqId() != undefinedReqId) && reqArchive.isCommited()
+                    && (reqArchive.getRequest() != null))) {
                 // skip if request is not ready to execute
                 return;
             }
 
-            RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> request_archive = request_map
-                    .get(requestid);
-            DadkvsMain.CommitRequest request = request_archive.getRequest();
+            DadkvsMain.CommitRequest request = reqArchive.getRequest();
 
             int reqid = request.getReqid();
             int key1 = request.getKey1();
@@ -131,7 +163,6 @@ public class RequestHandler {
             commit_success = this.server_state.store.commit(txrecord);
 
             // clean the request from the maps
-            request_map.remove(reqid);
             request_order_map.remove(this.requestsProcessed);
 
             requestsProcessedLock.lock(); // TODO maybe this can be removed if the whole function is
@@ -150,7 +181,7 @@ public class RequestHandler {
             DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
                     .setReqid(reqid).setAck(commit_success).build();
 
-            StreamObserver<DadkvsMain.CommitReply> responseObserver = request_archive.getResponseObserver();
+            StreamObserver<DadkvsMain.CommitReply> responseObserver = reqArchive.getResponseObserver();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
 
@@ -164,12 +195,23 @@ public class RequestHandler {
     }
 
     public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> getRequestByOrder(int order) {
-        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive;
-        if ((reqArchive = request_map.get(order)) == null) {
-            reqArchive = new RequestArchive<>(undefinedReqId);
+        RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = request_order_map.get(order);
+
+        if (reqArchive == null) {
+            addEmptyRequest();
         }
 
         return reqArchive;
+    }
+
+    public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> getRequestById(int reqId) {
+        for (Map.Entry<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> entry : request_order_map
+                .entrySet()) {
+            if (entry.getValue().getReqId() == reqId) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     public int getRequestsProcessed() {

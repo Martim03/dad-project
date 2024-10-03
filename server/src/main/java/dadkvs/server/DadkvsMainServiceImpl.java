@@ -81,7 +81,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // for debug purposes
         System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
                 + version2 + " wk " + writekey + " writeval " + writeval);
-        requestHandler.addRequest(request, responseObserver);
+        requestHandler.registerClientRequest(request, responseObserver);
 
         if (server_state.i_am_leader == true) {
             System.out.println("I think i am the leader, starting paxos consensus");
