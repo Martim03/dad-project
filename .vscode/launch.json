@@ -3,13 +3,35 @@
     "configurations": [
         {
             "type": "java",
-            "name": "DadkvsServer",
+            "name": "DadkvsServer1",
+            "request": "launch",
+            "mainClass": "dadkvs.server.DadkvsServer",
+            "projectName": "dadkvs-server",
+            "args": [
+                "8080",
+                "0"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "DadkvsServer2",
             "request": "launch",
             "mainClass": "dadkvs.server.DadkvsServer",
             "projectName": "dadkvs-server",
             "args": [
                 "8080",
                 "1"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "DadkvsServer3",
+            "request": "launch",
+            "mainClass": "dadkvs.server.DadkvsServer",
+            "projectName": "dadkvs-server",
+            "args": [
+                "8080",
+                "2"
             ]
         },
         {
