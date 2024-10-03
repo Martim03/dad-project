@@ -29,9 +29,11 @@ public class GenericResponseCollector<T> {
     synchronized public void waitForTarget(int target) {
         while ((pending > 0) && (received < target)) {
             try {
+                System.out.println("Waiting: pending=" + pending + ", received=" + received + ", target=" + target);
                 wait();
             } catch (InterruptedException e) {
             }
         }
+        System.out.println("Finished waiting: pending=" + pending + ", received=" + received + ", target=" + target);
     }
 }

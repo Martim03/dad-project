@@ -62,7 +62,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
     public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
             StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
         // for debug purposes
-        System.out.println("Receive phase two request: " + request);
+        System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val=" + request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
 
         /*
          * this is the request received from the leader to anounce the chosen value
@@ -77,6 +77,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         if (request.getPhase2Timestamp() < requestHandler.getRequestByOrder(request.getPhase2Index()).getReadTS()) { // TODO remove request dependency
             // reject the request
+            System.out.println("Rejecting phase two request: idx=" + request.getPhase2Index() + " ts=" + request.getPhase2Timestamp());
 
             phase2_reply.setPhase2Accepted(false);
 
@@ -85,6 +86,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             return;
         }
 
+        // Print debug message
+        System.out.println("Accepting phase two request: idx=" + request.getPhase2Index() + " ts=" + request.getPhase2Timestamp());
         // Fix the requests order with the new index
         requestHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value()); // TODO remove request dependency 
 
@@ -92,6 +95,12 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         requestHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp()); // TODO remove request dependency
 
         phase2_reply.setPhase2Config(0).setPhase2Index(request.getPhase2Index()).setPhase2Accepted(true);
+        
+        // Print debug message
+        System.out.println("Phase two request accepted: idx=" + request.getPhase2Index() + " ts=" + request.getPhase2Timestamp());
+
+        responseObserver.onNext(phase2_reply.build());
+        responseObserver.onCompleted();
     }
 
     @Override

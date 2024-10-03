@@ -47,7 +47,7 @@ public class RequestHandler {
         if (reqidOrder == null) {
             // if not found it is assumed as the last request to arrive (order)
             reqidOrder = order;
-            addEmptyRequest().setReqId(reqid); // TODO can it be empty and have  a reqID?????
+            addRequest().setReqId(reqid); // TODO is this right?
         }
 
         if (order == reqidOrder) {
@@ -60,7 +60,7 @@ public class RequestHandler {
         request_order_map.put(reqidOrder, temp);
     }
 
-    //TODO FOR SURE DA PARA DAR REFACTOR NISTO
+    // TODO FOR SURE DA PARA DAR REFACTOR NISTO
     public int GetIncrementOrder() {
         int nextOrder = -1;
 
@@ -198,7 +198,7 @@ public class RequestHandler {
         RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = request_order_map.get(order);
 
         if (reqArchive == null) {
-            addEmptyRequest();
+            reqArchive = addEmptyRequest();
         }
 
         return reqArchive;
