@@ -14,12 +14,17 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         this.requestHandler = requestHandler;
     }
 
-    // TODO handle the cases where some requests might be delayed and not exist in
-    // the server yet PAXOS must NOT depend on the REQUEST
-
     @Override
     public void phaseone(DadkvsPaxos.PhaseOneRequest request,
             StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
+
+        if (server_state.isOnlyLearner()) {
+                System.out.println("PANIC!!!!!!! LEARNER RECEIVING PHASE1");
+                // responseObserver.onNext(DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Accepted(false).build());
+                // responseObserver.onCompleted();
+                return;
+        }
+
         // for debug purposes
         System.out.println("Receive phase1 request: " + request);
 
@@ -62,6 +67,18 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
     public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
             StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
         // for debug purposes
+
+
+        // TODO fix timeouts, and use debug console, use debug varaible to decide
+        // TODO SEND LEARN
+
+        if (server_state.isOnlyLearner()) {
+            System.out.println("PANIC!!!!!!! LEARNER RECEIVING PHASE2");
+            // responseObserver.onNext(DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Accepted(false).build());
+            // responseObserver.onCompleted();
+            return;
+    }
+
         System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val="
                 + request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
 

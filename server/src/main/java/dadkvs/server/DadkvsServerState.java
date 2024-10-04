@@ -2,8 +2,9 @@ package dadkvs.server;
 
 public class DadkvsServerState {
 
-    final int INITIAL_LEADER_ID = 0;
     final int INITIAL_CONFIG = 0;
+    final int[][] CONFIG_MEMBERS = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
+    final int INITIAL_LEADER_ID = CONFIG_MEMBERS[INITIAL_CONFIG][0];
 
     int config;
     boolean i_am_leader;
@@ -28,7 +29,33 @@ public class DadkvsServerState {
         main_loop_worker.start();
     }
 
-    public int getConfig() {
+    public synchronized int getConfig() {
         return config;
     }
+
+    public synchronized void setConfig(int config) {
+        this.config = config;
+    }
+
+    public synchronized int[] getConfigMembers() {
+        return CONFIG_MEMBERS[config];
+    }
+
+    public synchronized boolean isLeader() {
+        return i_am_leader;
+    }
+
+    public synchronized void setLeader(boolean leader) {
+        i_am_leader = leader;
+    }
+
+    public synchronized boolean isOnlyLearner() {
+        for (int member : CONFIG_MEMBERS[config]) {
+            if (my_id == member) {
+            return false;
+            }
+        }
+        return true;
+    }
+
 }

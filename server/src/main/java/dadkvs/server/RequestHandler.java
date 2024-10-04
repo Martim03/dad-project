@@ -10,6 +10,8 @@ import dadkvs.DadkvsMain;
 import dadkvs.util.RequestArchive;
 import io.grpc.stub.StreamObserver;
 
+// TODO must implement debugmodes do enunciado !!!
+
 public class RequestHandler {
     // TODO check for request concureency!!
     // TODO add lookup map by reqId for optimization
@@ -47,7 +49,7 @@ public class RequestHandler {
         if (reqidOrder == null) {
             // if not found it is assumed as the last request to arrive (order)
             reqidOrder = order;
-            addRequest().setReqId(reqid); // TODO is this right?
+            addRequest().setReqId(reqid);
         }
 
         if (order == reqidOrder) {
@@ -146,7 +148,7 @@ public class RequestHandler {
 
         boolean commit_success = false;
 
-        handleCommitLock.lock(); // TODO check if the lock will work right after the first unlock
+        handleCommitLock.lock();
         try {
 
             RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = request_order_map

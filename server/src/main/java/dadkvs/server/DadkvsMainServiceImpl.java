@@ -19,10 +19,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-// TODO servers aware of configuration and their roles, send for acceptors, send for learners ....
-
-// TODO majority should be calculated by the number of acceptors and not the number of servers
-
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
@@ -93,6 +89,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
          */
 
         if (server_state.i_am_leader == true) {
+            // server is a LEADER
             System.out.println("I think i am the leader, starting paxos consensus");
 
             /*
@@ -116,8 +113,12 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
                 sendPhase1();
             }
 
-        } else {
+        } else if (!server_state.isOnlyLearner()) {
+            // server is a ACCEPTOR
             requestTimeout();
+        } else {
+            // server is a LEARNER
+            System.out.println("I am just a learner not interfere in paxos");
         }
 
         System.out.println("CHEGUEI AO FIM!!!!!!");
@@ -155,8 +156,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // that a leader is working?
         if (requestWasCommited || receivedPhase1) {
             // some leader started paxos, so dont assume leadership
-
-            server_state.i_am_leader = false; // TODO maybe remove? isnt needed but just to be safe
             return;
         }
 
@@ -187,7 +186,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
     }
 
-    public void onRefusal() { // TODO Watchout for recursive calls with sendPhase1() (not enough space)
+    public void onRefusal() {
         server_state.i_am_leader = false;
         my_id += num_servers;
         exponentialTimeout();
@@ -202,7 +201,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     }
 
     public void WaitForMajority(GenericResponseCollector responseCollector) {
-        responseCollector.waitForTarget((num_servers / 2) + 1);
+        responseCollector.waitForTarget((server_state.getConfigMembers().length / 2) + 1);
     }
 
     public void sendPhase1() {
@@ -213,11 +212,11 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
                 phase1_responses, this.num_servers);
-        CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
-                commit_collector);
 
-        for (int i = 0; i < this.num_servers; i++) {
-            this.async_stubs[i].phaseone(phase1_request.build(), commit_observer);
+        for (int i = 0; i < server_state.getConfigMembers().length; i++) {
+            CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
+                    commit_collector);
+            this.async_stubs[server_state.getConfigMembers()[i]].phaseone(phase1_request.build(), commit_observer);
             System.out.println("Sending Phase1 request to server " + i);
         }
 
@@ -261,10 +260,10 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector = new GenericResponseCollector<>(
                 phase2_responses, this.num_servers);
 
-        for (int i = 0; i < this.num_servers; i++) {
+        for (int i = 0; i < server_state.getConfigMembers().length; i++) {
             CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> phase2_observer = new CollectorStreamObserver<>(
                     phase2_collector);
-            this.async_stubs[i].phasetwo(phase2_request.build(), phase2_observer);
+            this.async_stubs[server_state.getConfigMembers()[i]].phasetwo(phase2_request.build(), phase2_observer);
             System.out.println("Sending Phase2 request to server " + i);
         }
 
@@ -296,10 +295,10 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.LearnReply> commit_collector = new GenericResponseCollector<>(
                 learn_responses, this.num_servers);
-        CollectorStreamObserver<DadkvsPaxos.LearnReply> commit_observer = new CollectorStreamObserver<>(
-                commit_collector);
 
         for (int i = 0; i < this.num_servers; i++) {
+            CollectorStreamObserver<DadkvsPaxos.LearnReply> commit_observer = new CollectorStreamObserver<>(
+                    commit_collector);
             this.async_stubs[i].learn(learn_request.build(), commit_observer);
             System.out.println("Sending Learn request to server " + i);
         }
