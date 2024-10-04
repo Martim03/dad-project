@@ -16,10 +16,11 @@ public class RequestHandler {
     // TODO check for request concureency!!
     // TODO add lookup map by reqId for optimization
 
-    int requestsProcessed;
-    Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_order_map;
-    DadkvsServerState server_state;
-    private int order = 0;
+    private int requestsProcessed;
+    // private int paxosIteration; // TODO check if this is needed
+    private Map<Integer, RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply>> request_order_map;
+    private DadkvsServerState server_state;
+    private int endOfOrderMap = 0;
     private final Lock requestsProcessedLock;
     private final Lock handleCommitLock;
     private final Lock orderLock;
@@ -47,8 +48,8 @@ public class RequestHandler {
         }
 
         if (reqidOrder == null) {
-            // if not found it is assumed as the last request to arrive (order)
-            reqidOrder = order;
+            // if not found it is assumed as the last request to arrive (endOfOrderMap)
+            reqidOrder = endOfOrderMap;
             addRequest().setReqId(reqid);
         }
 
@@ -68,7 +69,7 @@ public class RequestHandler {
 
         orderLock.lock();
         try {
-            nextOrder = this.order++;
+            nextOrder = this.endOfOrderMap++;
         } finally {
             orderLock.unlock();
         }
@@ -81,7 +82,7 @@ public class RequestHandler {
 
         orderLock.lock();
         try {
-            nextOrder = this.order;
+            nextOrder = this.endOfOrderMap;
         } finally {
             orderLock.unlock();
         }
@@ -90,9 +91,11 @@ public class RequestHandler {
     }
 
     public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> addRequest() {
-        // TODO for thread safety maybe it should receive an argument for which order it
+        // TODO for thread safety maybe it should receive an argument for which
+        // order it
         // is actually
-        // trying to add on, so that it doesnt end up adding on the wrong order, and
+        // trying to add on, so that it doesnt end up adding on the wrong order,
+        // and
         // if already exists just aborts, mind that this can be called on
         // getRequestByOrder()
 
@@ -103,9 +106,11 @@ public class RequestHandler {
     }
 
     public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> addEmptyRequest() {
-        // TODO for thread safety maybe it should receive an argument for which order it
+        // TODO for thread safety maybe it should receive an argument for which
+        // order it
         // is actually
-        // trying to add on, so that it doesnt end up adding on the wrong order, and
+        // trying to add on, so that it doesnt end up adding on the wrong order,
+        // and
         // if already exists just aborts, mind that this can be called on
         // getRequestByOrder()
 

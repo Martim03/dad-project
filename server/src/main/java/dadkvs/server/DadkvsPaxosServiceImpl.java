@@ -149,7 +149,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 // for debug purposes
                 System.out.println("Receive learn request: " + request);
 
-                if (!assertNotLearner("learn") || !assertNotCommited(request.getLearnindex())) {
+                if (!assertNotCommited(request.getLearnindex())) {
                         return;
                 }
 
@@ -168,7 +168,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 requestHandler.handleCommits();
 
                 // Respond with OK
-                // TODO is it neceessary to set the request attributes?
                 DadkvsPaxos.LearnReply.Builder learn_reply = DadkvsPaxos.LearnReply.newBuilder();
 
                 responseObserver.onNext(learn_reply.build());

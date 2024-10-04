@@ -312,5 +312,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // TODO Do we need to wait?? do errors matter?
         commit_collector.waitForTarget(this.num_servers);
         // TODO UNLOCK SECRET FORMULA AND NOTIFY ALL
+
+
+        // TODO nos paxos e maybe client req, que no inicio se nao for o idx==order vai ter que esperar SECRET FORMULA
     }
 }
