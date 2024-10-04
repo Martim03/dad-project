@@ -50,7 +50,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         int writeTS = requestHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS(); // TODO remove request dependency 
 
-        phase1_reply.setPhase1Config(0).setPhase1Index(requestHandler.getRequestsProcessed())
+        phase1_reply.setPhase1Config(server_state.getConfig()).setPhase1Index(requestHandler.getRequestsProcessed())
                 .setPhase1Timestamp(writeTS).setPhase1Accepted(true)
                 .setPhase1Value(requestHandler.getRequestByOrder(request.getPhase1Index()).getReqId()); // TODO remove request dependency
 
@@ -94,7 +94,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         // Update the writeTS of the request
         requestHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp()); // TODO remove request dependency
 
-        phase2_reply.setPhase2Config(0).setPhase2Index(request.getPhase2Index()).setPhase2Accepted(true);
+        phase2_reply.setPhase2Config(server_state.getConfig()).setPhase2Index(request.getPhase2Index()).setPhase2Accepted(true);
         
         // Print debug message
         System.out.println("Phase two request accepted: idx=" + request.getPhase2Index() + " ts=" + request.getPhase2Timestamp());

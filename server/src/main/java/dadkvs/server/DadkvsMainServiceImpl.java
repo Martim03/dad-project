@@ -180,7 +180,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public void sendPhase1() {
         DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
-        phase1_request.setPhase1Config(0).setPhase1Index(this.requestHandler.getRequestsProcessed())
+        phase1_request.setPhase1Config(server_state.getConfig()).setPhase1Index(this.requestHandler.getRequestsProcessed())
                 .setPhase1Timestamp(this.my_id);
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
@@ -225,7 +225,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public void sendPhase2() {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
-        phase2_request.setPhase2Config(0).setPhase2Index(requestHandler.getRequestsProcessed())
+        phase2_request.setPhase2Config(server_state.getConfig()).setPhase2Index(requestHandler.getRequestsProcessed())
                 .setPhase2Timestamp(this.my_id)
                 .setPhase2Value(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId()); // TODO
                                                                                                                      // remove
@@ -264,7 +264,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public void sendLearn() {
         DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
-        learn_request.setLearnconfig(0).setLearnindex(requestHandler.getRequestsProcessed())
+        learn_request.setLearnconfig(server_state.getConfig()).setLearnindex(requestHandler.getRequestsProcessed())
                 .setLearnvalue(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId())
                 .setLearntimestamp(my_id);
         ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<>();
