@@ -19,6 +19,8 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+// TODO always put if statements to check if the request was alaready comitted and now work is necessary! 
+
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
@@ -304,5 +306,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         }
 
         // TODO Do we need to wait??
+        commit_collector.waitForTarget(this.num_servers);
     }
 }

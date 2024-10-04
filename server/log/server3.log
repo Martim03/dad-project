@@ -1,0 +1,118 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m-----------------------< [0;36mdad2425:dadkvs-server[0;1m >------------------------[m
+[[1;34mINFO[m] [1mBuilding dadkvs-server skeleton[m
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mexec-maven-plugin:3.0.0:java[m [1m(default-cli)[m @ [36mdadkvs-server[0;1m ---[m
+DadkvsServer
+Main loop do work start
+Main loop do work: waiting
+Server started
+Receiving read request:reqid: 101
+key: 1
+
+Receiving read request:reqid: 201
+key: 2
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Receiving commit request at 2024-10-04T18:57:30.782682962: reqid: 301
+key1: 1
+key2: 2
+writekey: 3
+writeval: 941
+
+receiving:
+ reqid 301 key1 1 v1 0 k2 2 v2 0 wk 3 writeval 941
+Receive phase two request: idx=0 val=301 ts=0
+Accepting phase two request: idx=0 ts=0
+Phase two request accepted: idx=0 ts=0
+MESSAGE PHASE2 SENTTTTTTTTTTTTTTTTTTTTTTTTT
+Receive learn request: learnvalue: 301
+
+executing:
+ reqid 301 key1 1 v1 0 k2 2 v2 0 wk 3 writeval 941
+store commit read first key = 1 with version = 0  and current version = 0
+store commit read second key = 2 with version = 0 and current version = 0
+store commit write key  3 with value = 941 and version 0
+Commit was SUCCESSFUL for request with reqid 301
+Sending Phase1 request to server 0
+Sending Phase1 request to server 1
+Sending Phase1 request to server 2
+Waiting: pending=5, received=0, target=2
+Receive phase1 request: phase1index: 1
+phase1timestamp: 2
+
+Received response: phase1accepted: true
+phase1value: -1
+
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Received response: phase1index: 1
+phase1accepted: true
+phase1value: -1
+
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Finished waiting: pending=3, received=2, target=2
+Received response: phase1index: 1
+phase1accepted: true
+phase1value: -1
+
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Sending Phase2 request to server 0
+Sending Phase2 request to server 1
+Sending Phase2 request to server 2
+Waiting: pending=5, received=0, target=2
+Receive phase two request: idx=1 val=-1 ts=2
+Accepting phase two request: idx=1 ts=2
+Phase two request accepted: idx=1 ts=2
+MESSAGE PHASE2 SENTTTTTTTTTTTTTTTTTTTTTTTTT
+Received response: phase2index: 1
+phase2accepted: true
+
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Received response: phase2index: 1
+phase2accepted: true
+
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Finished waiting: pending=3, received=2, target=2
+Phase 2 responses majority was received
+Phase 2 succeeded, sending learn request
+Received response: phase2index: 1
+phase2accepted: true
+
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Sending Learn request to server 0
+Sending Learn request to server 1
+Sending Learn request to server 2
+Sending Learn request to server 3
+Sending Learn request to server 4
+Waiting: pending=5, received=0, target=5
+Receive learn request: learnindex: 1
+learnvalue: -1
+learntimestamp: 2
+
+Received response: 
+EEFFECTTIVEE MESSAAGEEEEE
+Received response: 
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Stream completed
+Waiting: pending=3, received=2, target=5
+Received response: 
+EEFFECTTIVEE MESSAAGEEEEE
+Waiting: pending=2, received=3, target=5
+Stream completed
+Received response: 
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Waiting: pending=1, received=4, target=5
+Received response: 
+EEFFECTTIVEE MESSAAGEEEEE
+Stream completed
+Finished waiting: pending=0, received=5, target=5
+CHEGUEI AO FIM!!!!!!

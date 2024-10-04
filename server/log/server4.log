@@ -1,0 +1,39 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m-----------------------< [0;36mdad2425:dadkvs-server[0;1m >------------------------[m
+[[1;34mINFO[m] [1mBuilding dadkvs-server skeleton[m
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mexec-maven-plugin:3.0.0:java[m [1m(default-cli)[m @ [36mdadkvs-server[0;1m ---[m
+DadkvsServer
+Main loop do work start
+Main loop do work: waiting
+Server started
+Receiving read request:reqid: 101
+key: 1
+
+Receiving read request:reqid: 201
+key: 2
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Receiving commit request at 2024-10-04T18:57:30.790205145: reqid: 301
+key1: 1
+key2: 2
+writekey: 3
+writeval: 941
+
+receiving:
+ reqid 301 key1 1 v1 0 k2 2 v2 0 wk 3 writeval 941
+I am just a learner not interfere in paxos
+CHEGUEI AO FIM!!!!!!
+Receive learn request: learnvalue: 301
+
+executing:
+ reqid 301 key1 1 v1 0 k2 2 v2 0 wk 3 writeval 941
+store commit read first key = 1 with version = 0  and current version = 0
+store commit read second key = 2 with version = 0 and current version = 0
+store commit write key  3 with value = 941 and version 0
+Commit was SUCCESSFUL for request with reqid 301
+Receive learn request: learnindex: 1
+learnvalue: -1
+learntimestamp: 2
+

@@ -88,7 +88,7 @@
         {
             "label": "Client 2",
             "type": "shell",
-            "command": "mvn exec:java -Dexec.args='2 \"${server.host}\" \"${server.port}\" \"${client.keyrange}\" \"${client.sleeprange}\" \"${client.loopsize}\" \"${client.interactivemode}\" \"${server1.delay}\" \"${server2.delay}\" \"${server3.delay}\" \"${server4.delay}\" \"${server5.delay}\"'",
+            "command": "mvn exec:java -Dexec.args='2 \"${server.host}\" \"${server.port}\" \"${client.keyrange}\" \"${client.sleeprange}\" \"${client.loopsize}\" \"${client.interactivemode}\" \"--delay 0 7\" \"${server2.delay}\" \"${server3.delay}\" \"${server4.delay}\" \"${server5.delay}\"'",
             "options": {
                 "cwd": "${workspaceFolder}/client"
             },
@@ -114,6 +114,76 @@
             }
         },
         {
+            "label": "LOG: Server 1",
+            "type": "shell",
+            "command": "mvn exec:java -Dexec.args=\"8080 0\" > log/server1.log",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "group": "terminals",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
+            "label": "LOG: Server 2",
+            "type": "shell",
+            "command": "mvn exec:java -Dexec.args=\"8080 1\" > log/server2.log",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "group": "terminals",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
+            "label": "LOG: Server 3",
+            "type": "shell",
+            "command": "mvn exec:java -Dexec.args=\"8080 2\" > log/server3.log",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "group": "terminals",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
+            "label": "LOG: Server 4",
+            "type": "shell",
+            "command": "mvn exec:java -Dexec.args=\"8080 3\" > log/server4.log",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "group": "terminals",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
+            "label": "LOG: Server 5",
+            "type": "shell",
+            "command": "mvn exec:java -Dexec.args=\"8080 4\" > log/server5.log",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            },
+            "presentation": {
+                "panel": "dedicated",
+                "group": "terminals",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
             "label": "Run All Terminals",
             "type": "shell",
             "dependsOn": [
@@ -129,6 +199,23 @@
             "presentation": {
                 "panel": "shared"
             }
-        }
+        },
+        {
+            "label": "LOG: Run All Terminals",
+            "type": "shell",
+            "dependsOn": [
+                "LOG: Server 1",
+                "LOG: Server 2",
+                "LOG: Server 3",
+                "LOG: Server 4",
+                "LOG: Server 5",
+                "Client 1",
+                "Client 2",
+                "Admin Console"
+            ],
+            "presentation": {
+                "panel": "shared"
+            }
+        },
     ]
 }
