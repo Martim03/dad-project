@@ -7,15 +7,20 @@ public class GenericResponseCollector<T> {
     ArrayList<T> collectedResponses;
     int received;
     int pending;
+    boolean targetReached;
 
     public GenericResponseCollector(ArrayList<T> responses, int maxresponses) {
         collectedResponses = responses;
         received = 0;
         pending = maxresponses;
+        targetReached = false;
     }
 
     synchronized public void addResponse(T resp) {
-        collectedResponses.add(resp);
+        if (!targetReached) {
+            collectedResponses.add(resp);
+        }
+
         received++;
         pending--;
         notifyAll();
@@ -34,6 +39,7 @@ public class GenericResponseCollector<T> {
             } catch (InterruptedException e) {
             }
         }
+        targetReached = true;
         System.out.println("Finished waiting: pending=" + pending + ", received=" + received + ", target=" + target);
     }
 }
