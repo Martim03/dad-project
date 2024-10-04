@@ -36,6 +36,28 @@
         },
         {
             "type": "java",
+            "name": "DadkvsServer4",
+            "request": "launch",
+            "mainClass": "dadkvs.server.DadkvsServer",
+            "projectName": "dadkvs-server",
+            "args": [
+                "8080",
+                "3"
+            ]
+        },
+        {
+            "type": "java",
+            "name": "DadkvsServer5",
+            "request": "launch",
+            "mainClass": "dadkvs.server.DadkvsServer",
+            "projectName": "dadkvs-server",
+            "args": [
+                "8080",
+                "4"
+            ]
+        },
+        {
+            "type": "java",
             "name": "DadkvsClient",
             "request": "launch",
             "mainClass": "dadkvs.client.DadkvsClient",

@@ -21,6 +21,8 @@ import io.grpc.stub.StreamObserver;
 
 // TODO servers aware of configuration and their roles, send for acceptors, send for learners ....
 
+// TODO majority should be calculated by the number of acceptors and not the number of servers
+
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
@@ -78,7 +80,17 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // for debug purposes
         System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
                 + version2 + " wk " + writekey + " writeval " + writeval);
-        requestHandler.registerClientRequest(request, responseObserver);
+        requestHandler.registerClientRequest(request, responseObserver); // TODO could be locked to ensure no problems
+                                                                         // with multiple requests at same time, also
+                                                                         // ensure no duplicates(even though would never
+                                                                         // happen)
+
+        /*
+         * TODO ensure no 2 requests are handlel at same time
+         * requests must be put on hold and handled again after ending a paxus round
+         * 
+         * if (currently on paxos ) skip ?
+         */
 
         if (server_state.i_am_leader == true) {
             System.out.println("I think i am the leader, starting paxos consensus");
@@ -98,6 +110,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
             if (server_state.my_id == 0) {
                 // if its the first leader skips phase 1
+
                 sendPhase2();
             } else {
                 sendPhase1();
@@ -133,6 +146,20 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
             System.out.println("Request timeout interrupted: " + e.getMessage());
         }
 
+        boolean requestWasCommited = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
+                .isCommited();
+        boolean receivedPhase1 = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
+                .getReadTS() > 0;
+
+        // TODO maybe receiving a phase2 (even though no phase1) is enough to assume
+        // that a leader is working?
+        if (requestWasCommited || receivedPhase1) {
+            // some leader started paxos, so dont assume leadership
+
+            server_state.i_am_leader = false; // TODO maybe remove? isnt needed but just to be safe
+            return;
+        }
+
         server_state.i_am_leader = true;
         sendPhase1();
     }
@@ -165,7 +192,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         my_id += num_servers;
         exponentialTimeout();
 
-        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) { // TODO remove
+        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) { // remove
                                                                                                     // request dependecy
             return;
         }
@@ -180,7 +207,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public void sendPhase1() {
         DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
-        phase1_request.setPhase1Config(server_state.getConfig()).setPhase1Index(this.requestHandler.getRequestsProcessed())
+        phase1_request.setPhase1Config(server_state.getConfig())
+                .setPhase1Index(this.requestHandler.getRequestsProcessed())
                 .setPhase1Timestamp(this.my_id);
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
@@ -227,23 +255,21 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
         phase2_request.setPhase2Config(server_state.getConfig()).setPhase2Index(requestHandler.getRequestsProcessed())
                 .setPhase2Timestamp(this.my_id)
-                .setPhase2Value(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId()); // TODO
-                                                                                                                     // remove
-                                                                                                                     // request
-                                                                                                                     // dependency
+                .setPhase2Value(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId());
+
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
-        GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> commit_collector = new GenericResponseCollector<>(
+        GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector = new GenericResponseCollector<>(
                 phase2_responses, this.num_servers);
-        CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> commit_observer = new CollectorStreamObserver<>(
-                commit_collector);
 
         for (int i = 0; i < this.num_servers; i++) {
-            this.async_stubs[i].phasetwo(phase2_request.build(), commit_observer);
+            CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> phase2_observer = new CollectorStreamObserver<>(
+                    phase2_collector);
+            this.async_stubs[i].phasetwo(phase2_request.build(), phase2_observer);
             System.out.println("Sending Phase2 request to server " + i);
         }
 
         boolean success = true;
-        WaitForMajority(commit_collector);
+        WaitForMajority(phase2_collector);
         System.out.println("Phase 2 responses majority was received");
         for (PhaseTwoReply phaseTwoReply : phase2_responses) {
             if (!phaseTwoReply.getPhase2Accepted()) {
@@ -252,7 +278,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
                 break;
             }
         }
-        
+
         if (!success) {
             System.out.println("Phase 2 failed, initiating onRefusal process");
             onRefusal();

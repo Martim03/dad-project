@@ -88,6 +88,12 @@ public class RequestHandler {
     }
 
     public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> addRequest() {
+        // TODO for thread safety maybe it should receive an argument for which order it
+        // is actually
+        // trying to add on, so that it doesnt end up adding on the wrong order, and
+        // if already exists just aborts, mind that this can be called on
+        // getRequestByOrder()
+
         RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = new RequestArchive<>();
 
         request_order_map.put(GetIncrementOrder(), reqArchive);
@@ -95,6 +101,12 @@ public class RequestHandler {
     }
 
     public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> addEmptyRequest() {
+        // TODO for thread safety maybe it should receive an argument for which order it
+        // is actually
+        // trying to add on, so that it doesnt end up adding on the wrong order, and
+        // if already exists just aborts, mind that this can be called on
+        // getRequestByOrder()
+
         RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArchive = new RequestArchive<>();
 
         request_order_map.put(getOrder(), reqArchive);
@@ -129,6 +141,8 @@ public class RequestHandler {
     }
 
     public void handleCommits() {
+
+        // TODO check thoroughly how it will work with paxos and every call
 
         boolean commit_success = false;
 

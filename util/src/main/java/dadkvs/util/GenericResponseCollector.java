@@ -17,6 +17,8 @@ public class GenericResponseCollector<T> {
     }
 
     synchronized public void addResponse(T resp) {
+        System.out.println("EEFFECTTIVEE MESSAAGEEEEE");
+
         if (!targetReached) {
             collectedResponses.add(resp);
         }
@@ -27,6 +29,8 @@ public class GenericResponseCollector<T> {
     }
 
     synchronized public void addNoResponse() {
+        System.out.println("11111EEFFECTTIVEE MESSAAGEEEEE222222222");
+
         pending--;
         notifyAll();
     }
