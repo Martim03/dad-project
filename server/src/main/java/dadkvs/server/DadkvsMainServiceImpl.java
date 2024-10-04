@@ -19,7 +19,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-// TODO always put if statements to check if the request was alaready comitted and now work is necessary! 
+// TODO always put if statements to check if the request was alaready comitted and no work is necessary! 
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
@@ -64,7 +64,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
 
         // for debug purposes
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Receiving commit request at "
+        System.out.println("Receiving commit request at "
                 + java.time.LocalDateTime.now() + ": " + request);
 
         int reqid = request.getReqid();
@@ -75,13 +75,19 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         int writekey = request.getWritekey();
         int writeval = request.getWriteval();
 
-        // for debug purposes
-        System.out.println("receiving:\n reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
-                + version2 + " wk " + writekey + " writeval " + writeval);
+        // // for debug purposes
+        // System.out.println(">>> RECEIVING:\n reqid " + reqid + " key1 " + key1 + " v1
+        // " + version1 + " k2 " + key2 + " v2 "
+        // + version2 + " wk " + writekey + " writeval " + writeval);
         requestHandler.registerClientRequest(request, responseObserver); // TODO could be locked to ensure no problems
                                                                          // with multiple requests at same time, also
                                                                          // ensure no duplicates(even though would never
                                                                          // happen)
+
+        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) {
+            // Already commited, skiping paxos
+            return;
+        }
 
         /*
          * TODO ensure no 2 requests are handlel at same time
@@ -151,12 +157,10 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         boolean requestWasCommited = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
                 .isCommited();
-        boolean receivedPhase1 = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
+        boolean receivedPaxosMessages = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
                 .getReadTS() > 0;
 
-        // TODO maybe receiving a phase2 (even though no phase1) is enough to assume
-        // that a leader is working?
-        if (requestWasCommited || receivedPhase1) {
+        if (requestWasCommited || receivedPaxosMessages) {
             // some leader started paxos, so dont assume leadership
             return;
         }
@@ -193,8 +197,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         my_id += num_servers;
         exponentialTimeout();
 
-        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) { // remove
-                                                                                                    // request dependecy
+        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) { 
+            // Already commited, skiping paxos
             return;
         }
 
@@ -305,7 +309,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
             System.out.println("Sending Learn request to server " + i);
         }
 
-        // TODO Do we need to wait??
+        // TODO Do we need to wait?? do errors matter?
         commit_collector.waitForTarget(this.num_servers);
+        // TODO UNLOCK SECRET FORMULA AND NOTIFY ALL
     }
 }

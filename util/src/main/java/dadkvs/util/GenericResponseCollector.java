@@ -17,7 +17,6 @@ public class GenericResponseCollector<T> {
     }
 
     synchronized public void addResponse(T resp) {
-        System.out.println("EEFFECTTIVEE MESSAAGEEEEE");
 
         if (!targetReached) {
             collectedResponses.add(resp);
@@ -29,7 +28,6 @@ public class GenericResponseCollector<T> {
     }
 
     synchronized public void addNoResponse() {
-        System.out.println("11111EEFFECTTIVEE MESSAAGEEEEE222222222");
 
         pending--;
         notifyAll();
@@ -38,12 +36,10 @@ public class GenericResponseCollector<T> {
     synchronized public void waitForTarget(int target) {
         while ((pending > 0) && (received < target)) {
             try {
-                System.out.println("Waiting: pending=" + pending + ", received=" + received + ", target=" + target);
                 wait();
             } catch (InterruptedException e) {
             }
         }
         targetReached = true;
-        System.out.println("Finished waiting: pending=" + pending + ", received=" + received + ", target=" + target);
     }
 }

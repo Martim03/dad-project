@@ -14,17 +14,30 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 this.requestHandler = requestHandler;
         }
 
-        private void assertNotLearner(String method) {
+        private boolean assertNotLearner(String method) {
                 if (server_state.isOnlyLearner()) {
                         System.out.println("PANIC!!!!!!! LEARNER RECEIVING " + method);
+                        return false;
                 }
+                return true;
+        }
+
+        private boolean assertNotCommited(int order) {
+                if (requestHandler.getRequestByOrder(order).isCommited()) {
+                        // Already commited, skiping paxos
+                        System.err.println("Request already commited, skipping paxos");
+                        return false;
+                }
+                return true;
         }
 
         @Override
         public void phaseone(DadkvsPaxos.PhaseOneRequest request,
                         StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
 
-                assertNotLearner("phaseone");
+                if (!assertNotLearner("phaseone") || !assertNotCommited(request.getPhase1Index())) {
+                        return;
+                }
 
                 // for debug purposes
                 System.out.println("Receive phase1 request: " + request);
@@ -74,7 +87,9 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 // TODO fix timeouts, and use debug console, use debug varaible to decide
                 // TODO SEND LEARN
 
-                assertNotLearner("phasetwo");
+                if (!assertNotLearner("phasetwo") || !assertNotCommited(request.getPhase2Index())) {
+                        return;
+                }
 
                 System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val="
                                 + request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
@@ -90,7 +105,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
                 DadkvsPaxos.PhaseTwoReply.Builder phase2_reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
 
-                if (request.getPhase2Timestamp() != requestHandler.getRequestByOrder(request.getPhase2Index())
+                if (request.getPhase2Timestamp() < requestHandler.getRequestByOrder(request.getPhase2Index())
                                 .getReadTS()) {
                         // reject the request
                         System.out.println("Rejecting phase two request: idx=" + request.getPhase2Index() + " ts="
@@ -103,6 +118,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                         return;
                 }
 
+                // TODO update read and write TS
+
                 // Print debug message
                 System.out.println(
                                 "Accepting phase two request: idx=" + request.getPhase2Index() + " ts="
@@ -111,7 +128,9 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 requestHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value());
 
                 // Update the writeTS of the request
-                requestHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp());
+                // TODO Update the readTS of the request (is this necessary?)
+                requestHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp())
+                                .setReadTS(request.getPhase2Timestamp());
 
                 phase2_reply.setPhase2Config(server_state.getConfig()).setPhase2Index(request.getPhase2Index())
                                 .setPhase2Accepted(true);
@@ -123,14 +142,16 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
                 responseObserver.onNext(phase2_reply.build());
                 responseObserver.onCompleted();
-
-                System.out.println("MESSAGE PHASE2 SENTTTTTTTTTTTTTTTTTTTTTTTTT");
         }
 
         @Override
         public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
                 // for debug purposes
                 System.out.println("Receive learn request: " + request);
+
+                if (!assertNotLearner("learn") || !assertNotCommited(request.getLearnindex())) {
+                        return;
+                }
 
                 /*
                  * this is the request received from the leader to anounce the value to commit
