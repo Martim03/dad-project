@@ -123,7 +123,10 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         } else if (!server_state.isOnlyLearner()) {
             // server is a ACCEPTOR
-            requestTimeout();
+            requestTimeout(); // TODO maybe change to exponentialTimeout, because requestTimeout is
+                              // only called once, and if it has received a paxos message
+                              // but the current leader dies after, it wont try to become leader again
+                              // exponentialTimeout will keep trying to become leader until it is commited (finished)
         } else {
             // server is a LEARNER
             System.out.println("I am just a learner not interfere in paxos");
