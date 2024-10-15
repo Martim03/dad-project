@@ -4,11 +4,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dadkvs.DadkvsMain;
 
-public class PaxosOrdered {
+public class PaxosLog {
 
     private ConcurrentHashMap<Integer, PaxosProposal> orderedRequestsMap;
 
-    public PaxosOrdered() {
+    public PaxosLog() {
         orderedRequestsMap = new ConcurrentHashMap<>();
     }
 
@@ -23,13 +23,13 @@ public class PaxosOrdered {
         orderedRequestsMap.put(order, propose);
     }
 
-    /** (Leaner POV) Called by Learn: Commits proposal for a given order */
+    /** (Learner POV) Called by Learn: Commits proposal for a given order */
     public void commitPropose(int order, PaxosProposal propose) {
         propose.setCommited(true);
         setPropose(order, propose);
     }
 
-    /** (Leaner POV) Called by Learner: Get current proposal requestId, if its not commited or does not exist return null */
+    /** (Learner POV) Called by Learner: Get current proposal requestId, if its not commited or does not exist return null */
     public Integer getCommitedRequestId(int order) {
         PaxosProposal prop = this.getPropose(order);
         if (prop != null && prop.isCommited()) {

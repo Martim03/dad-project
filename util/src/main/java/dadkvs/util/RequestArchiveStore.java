@@ -13,7 +13,7 @@ public class RequestArchiveStore {
         this.archiveStore = new ConcurrentHashMap<>();
     }
 
-    /** (Leaner POV) Called by Learner: Get Request to be executed */
+    /** (Learner POV) Called by Learner: Get Request to be executed */
     public RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> getRequest(int reqId) {
         return archiveStore.get(reqId);
     }
@@ -40,7 +40,7 @@ public class RequestArchiveStore {
         return null;
     }
 
-    /** (Leaner POV) Called by Learner: Remove Request after it gets executed (memory saving purposes) */
+    /** (Learner POV) Called by Learner: Remove Request after it gets executed (memory saving purposes) */
     public void removeRequest(int reqId) {
         archiveStore.remove(reqId);
     }

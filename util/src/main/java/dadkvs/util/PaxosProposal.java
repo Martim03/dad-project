@@ -28,20 +28,24 @@ public class PaxosProposal {
         return commited;
     }
 
-    public synchronized void setWriteTS(int writeTS) {
+    public synchronized PaxosProposal setWriteTS(int writeTS) {
         this.writeTS = writeTS;
+        return this;
     }
 
-    public synchronized void setReadTS(int readTS) {
+    public synchronized PaxosProposal setReadTS(int readTS) {
         this.readTS = readTS;
+        return this;
     }
 
-    public synchronized void setReqId(int reqId) {
+    public synchronized PaxosProposal setReqId(int reqId) {
         this.reqId = reqId;
+        return this;
     }
 
-    public synchronized void setCommited(boolean commited) {
+    public synchronized PaxosProposal setCommited(boolean commited) {
         this.commited = commited;
+        return this;
     }
 
     

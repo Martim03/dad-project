@@ -16,38 +16,38 @@ public class RequestArchive<ReqT, RespT> {
         this.proposable = true;
     }
 
-    public ReqT getRequest() {
+    public synchronized ReqT getRequest() {
         return request;
     }
 
-    public StreamObserver<RespT> getResponseObserver() {
+    public synchronized StreamObserver<RespT> getResponseObserver() {
         return responseObserver;
     }
 
-    public int getReqId() {
+    public synchronized int getReqId() {
         return reqId;
     }
 
-    public boolean isProposable() {
+    public synchronized boolean isProposable() {
         return proposable;
     }
 
-    public RequestArchive<ReqT, RespT> setReqId(int reqId) {
+    public synchronized RequestArchive<ReqT, RespT> setReqId(int reqId) {
         this.reqId = reqId;
         return this;
     }
 
-    public RequestArchive<ReqT, RespT> setRequest(ReqT request) {
+    public synchronized RequestArchive<ReqT, RespT> setRequest(ReqT request) {
         this.request = request;
         return this;
     }
 
-    public RequestArchive<ReqT, RespT> setResponseObserver(StreamObserver<RespT> responseObserver) {
+    public synchronized RequestArchive<ReqT, RespT> setResponseObserver(StreamObserver<RespT> responseObserver) {
         this.responseObserver = responseObserver;
         return this;
     }
 
-    public void markUnproposable() {
+    public synchronized void markUnproposable() {
         this.proposable = false;
     }
 }
