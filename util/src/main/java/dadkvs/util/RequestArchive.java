@@ -7,17 +7,13 @@ public class RequestArchive<ReqT, RespT> {
     private ReqT request;
     private StreamObserver<RespT> responseObserver;
     private int reqId;
-    private int writeTS;
-    private int readTS;
-    private boolean commited;
+    private boolean proposable;
 
-    public RequestArchive() {
-        this.request = null;
-        this.responseObserver = null;
-        this.reqId = -1;
-        this.writeTS = 0;
-        this.readTS = 0;
-        this.commited = false;
+    public RequestArchive(ReqT request, StreamObserver<RespT> responseObserver, int reqId) {
+        this.request = request;
+        this.responseObserver = responseObserver;
+        this.reqId = reqId;
+        this.proposable = true;
     }
 
     public ReqT getRequest() {
@@ -28,16 +24,12 @@ public class RequestArchive<ReqT, RespT> {
         return responseObserver;
     }
 
-    public int getWriteTS() {
-        return writeTS;
+    public int getReqId() {
+        return reqId;
     }
 
-    public int getReadTS() {
-        return readTS;
-    }
-
-    public boolean isCommited() {
-        return commited;
+    public boolean isProposable() {
+        return proposable;
     }
 
     public RequestArchive<ReqT, RespT> setReqId(int reqId) {
@@ -55,22 +47,7 @@ public class RequestArchive<ReqT, RespT> {
         return this;
     }
 
-    public RequestArchive<ReqT, RespT> setWriteTS(int writeTS) {
-        this.writeTS = writeTS;
-        return this;
-    }
-
-    public RequestArchive<ReqT, RespT> setReadTS(int readTS) {
-        this.readTS = readTS;
-        return this;
-    }
-
-    public RequestArchive<ReqT, RespT> setCommited(boolean commited) {
-        this.commited = commited;
-        return this;
-    }
-
-    public int getReqId() {
-        return reqId;
+    public void markUnproposable() {
+        this.proposable = false;
     }
 }

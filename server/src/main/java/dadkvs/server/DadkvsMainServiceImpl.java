@@ -24,7 +24,7 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
     DadkvsServerState server_state;
-    RequestHandler requestHandler;
+    CommitHandler commitHandler;
     int num_servers;
     int my_id;
     ManagedChannel[] channels;
@@ -33,11 +33,11 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     int attempt = 0;
     int orderAttempted;
 
-    public DadkvsMainServiceImpl(DadkvsServerState state, RequestHandler handler, int my_id) {
+    public DadkvsMainServiceImpl(DadkvsServerState state, CommitHandler handler, int my_id) {
         this.server_state = state;
         this.my_id = my_id;
-        this.requestHandler = handler;
-        this.orderAttempted = requestHandler.getRequestsProcessed();
+        this.commitHandler = handler;
+        this.orderAttempted = commitHandler.getRequestsProcessed();
         this.num_servers = 5;
         this.channels = new ManagedChannel[this.num_servers];
         this.async_stubs = new DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[this.num_servers];
@@ -79,12 +79,12 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // System.out.println(">>> RECEIVING:\n reqid " + reqid + " key1 " + key1 + " v1
         // " + version1 + " k2 " + key2 + " v2 "
         // + version2 + " wk " + writekey + " writeval " + writeval);
-        requestHandler.registerClientRequest(request, responseObserver); // TODO could be locked to ensure no problems
+        commitHandler.registerClientRequest(request, responseObserver); // TODO could be locked to ensure no problems
                                                                          // with multiple requests at same time, also
                                                                          // ensure no duplicates(even though would never
                                                                          // happen)
 
-        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) {
+        if (commitHandler.getRequestByOrder(commitHandler.getRequestsProcessed()).isCommited()) {
             // Already commited, skiping paxos
             return;
         }
@@ -158,9 +158,9 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
             System.out.println("Request timeout interrupted: " + e.getMessage());
         }
 
-        boolean requestWasCommited = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
+        boolean requestWasCommited = commitHandler.getRequestByOrder(commitHandler.getRequestsProcessed())
                 .isCommited();
-        boolean receivedPaxosMessages = requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed())
+        boolean receivedPaxosMessages = commitHandler.getRequestByOrder(commitHandler.getRequestsProcessed())
                 .getReadTS() > 0;
 
         if (requestWasCommited || receivedPaxosMessages) {
@@ -175,11 +175,11 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     private void exponentialTimeout() {
         expOrderAttemptLock.lock();
         try {
-            if (requestHandler.getRequestsProcessed() == orderAttempted) {
+            if (commitHandler.getRequestsProcessed() == orderAttempted) {
                 attempt++;
             } else {
                 attempt = 0;
-                orderAttempted = requestHandler.getRequestsProcessed();
+                orderAttempted = commitHandler.getRequestsProcessed();
             }
         } finally {
             expOrderAttemptLock.unlock();
@@ -200,7 +200,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         my_id += num_servers;
         exponentialTimeout();
 
-        if (requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).isCommited()) { 
+        if (commitHandler.getRequestByOrder(commitHandler.getRequestsProcessed()).isCommited()) { 
             // Already commited, skiping paxos
             return;
         }
@@ -216,7 +216,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public void sendPhase1() {
         DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
         phase1_request.setPhase1Config(server_state.getConfig())
-                .setPhase1Index(this.requestHandler.getRequestsProcessed())
+                .setPhase1Index(this.commitHandler.getRequestsProcessed())
                 .setPhase1Timestamp(this.my_id);
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
@@ -252,7 +252,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
             // else selects most recent value (highest writeTS)
 
             if (latestValue != null) {
-                requestHandler.SwapRequestOrder(requestHandler.getRequestsProcessed(), latestValue);
+                commitHandler.SwapRequestOrder(commitHandler.getRequestsProcessed(), latestValue);
             }
 
             sendPhase2();
@@ -261,9 +261,9 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public void sendPhase2() {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
-        phase2_request.setPhase2Config(server_state.getConfig()).setPhase2Index(requestHandler.getRequestsProcessed())
+        phase2_request.setPhase2Config(server_state.getConfig()).setPhase2Index(commitHandler.getRequestsProcessed())
                 .setPhase2Timestamp(this.my_id)
-                .setPhase2Value(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId());
+                .setPhase2Value(commitHandler.getRequestByOrder(commitHandler.getRequestsProcessed()).getReqId());
 
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector = new GenericResponseCollector<>(
@@ -298,8 +298,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     public void sendLearn() {
         DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
-        learn_request.setLearnconfig(server_state.getConfig()).setLearnindex(requestHandler.getRequestsProcessed())
-                .setLearnvalue(requestHandler.getRequestByOrder(requestHandler.getRequestsProcessed()).getReqId())
+        learn_request.setLearnconfig(server_state.getConfig()).setLearnindex(commitHandler.getRequestsProcessed())
+                .setLearnvalue(commitHandler.getRequestByOrder(commitHandler.getRequestsProcessed()).getReqId())
                 .setLearntimestamp(my_id);
         ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.LearnReply> commit_collector = new GenericResponseCollector<>(

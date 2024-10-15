@@ -29,7 +29,7 @@ public class DadkvsServer {
 
         server_state = new DadkvsServerState(kvsize, base_port, my_id);
 
-        RequestHandler handler = new RequestHandler(server_state);
+        CommitHandler handler = new CommitHandler(server_state);
 
         port = base_port + my_id;
 
