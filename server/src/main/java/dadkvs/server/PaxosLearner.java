@@ -24,7 +24,7 @@ public class PaxosLearner extends PaxosParticipant {
 	public void receiveLearn(DadkvsPaxos.LearnRequest request,
 			StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
 
-		System.out.println("Receive learn request: " + request);
+		System.out.println("LEARNER: Receive learn request: " + request);
 
 		// reply to the sender with "empty" message
 		DadkvsPaxos.LearnReply.Builder learn_reply = DadkvsPaxos.LearnReply.newBuilder();
@@ -85,7 +85,7 @@ public class PaxosLearner extends PaxosParticipant {
 			int writeval = request.getWriteval();
 
 			System.out.println(
-					">>> EXECUTING:\n reqid " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
+					"LEARNER: >>> EXECUTING:\n reqid " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
 							+ version2 + " wk " + writekey + " writeval " + writeval);
 
 			TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
@@ -98,7 +98,7 @@ public class PaxosLearner extends PaxosParticipant {
 			this.requestsProcessed++;
 
 			System.out.println(
-					"Commit was " + (commit_success ? "SUCCESSFUL" : "ABORTED") + " for request with reqid "
+					"LEARNER: Commit was " + (commit_success ? "SUCCESSFUL" : "ABORTED") + " for request with reqid "
 							+ reqId);
 
 			DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()

@@ -11,14 +11,18 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
     PaxosProposer proposer;
     PaxosLearner learner;
+    DebugModes debug;
 
-    public DadkvsMainServiceImpl(PaxosProposer proposer, PaxosLearner learner) {
+    public DadkvsMainServiceImpl(PaxosProposer proposer, PaxosLearner learner, DebugModes debug) {
         this.proposer = proposer;
         this.learner = learner;
+        this.debug = debug;
     }
 
     @Override
     public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
+        debug.applyDebugMode(learner.getServerState().getDebugMode(), true);
+
         // for debug purposesd
         System.out.println("Receiving read request:" + request);
 
@@ -35,6 +39,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     @Override
     public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
+        debug.applyDebugMode(learner.getServerState().getDebugMode(), true);
+
         // for debug purposes
         System.out.println("Receiving commit request at "
                 + java.time.LocalDateTime.now() + ": " + request);

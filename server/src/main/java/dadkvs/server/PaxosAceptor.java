@@ -25,7 +25,7 @@ public class PaxosAceptor extends PaxosParticipant {
 	public void receivePhaseOne(DadkvsPaxos.PhaseOneRequest request,
 			StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
 
-		System.out.println("Receive phase1 request: " + request);
+		System.out.println("ACEPTOR: Receive phase1 request: " + request);
 
 		PaxosLog paxosLog = super.getPaxosLog();
 		PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase1Index());
@@ -69,7 +69,7 @@ public class PaxosAceptor extends PaxosParticipant {
 	public void receivePhaseTwo(DadkvsPaxos.PhaseTwoRequest request,
 			StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
 
-		System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val="
+		System.out.println("ACEPTOR: Receive phase two request: idx=" + request.getPhase2Index() + " val="
 				+ request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
 
 		PaxosLog paxosLog = super.getPaxosLog();
@@ -84,7 +84,7 @@ public class PaxosAceptor extends PaxosParticipant {
 
 		if (request.getPhase2Timestamp() < currentProposal.getReadTS()) {
 			// reject the request
-			System.out.println("Rejecting phase two request: idx=" + request.getPhase2Index() + " ts="
+			System.out.println("ACEPTOR: Rejecting phase two request: idx=" + request.getPhase2Index() + " ts="
 					+ request.getPhase2Timestamp());
 
 			phase2Reply.setPhase2Accepted(false);
@@ -95,7 +95,7 @@ public class PaxosAceptor extends PaxosParticipant {
 		}
 
 		System.out.println(
-				"Accepting phase two request: idx=" + request.getPhase2Index() + " ts="
+				"ACEPTOR: Accepting phase two request: idx=" + request.getPhase2Index() + " ts="
 						+ request.getPhase2Timestamp());
 
 		// Update the writeTS and readTS of the request
@@ -106,7 +106,7 @@ public class PaxosAceptor extends PaxosParticipant {
 				.setPhase2Accepted(true);
 
 		System.out.println(
-				"Phase two request accepted: idx=" + request.getPhase2Index() + " ts="
+				"ACEPTOR: Phase two request accepted: idx=" + request.getPhase2Index() + " ts="
 						+ request.getPhase2Timestamp());
 
 		responseObserver.onNext(phase2Reply.build());
@@ -133,7 +133,7 @@ public class PaxosAceptor extends PaxosParticipant {
 			CollectorStreamObserver<DadkvsPaxos.LearnReply> commit_observer = new CollectorStreamObserver<>(
 					commit_collector);
 			learnerStub.learn(learnRequest.build(), commit_observer);
-			System.out.println("Sending Learn request to server");
+			System.out.println("ACEPTOR: Sending Learn request to server");
 		}
 
 		commit_collector.waitForTarget(state.getNumLearners()); // TODO figure out how to wait without blocking the

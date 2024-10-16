@@ -5,6 +5,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
+    // TODO ReConfiguration
 
     final int INITIAL_CONFIG = 0;
     final int[][] CONFIG_MEMBERS = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
@@ -22,8 +23,9 @@ public class DadkvsServerState {
     private int num_servers;
     private ManagedChannel[] channels;
     private DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
+    private DebugModes debug;
 
-    public DadkvsServerState(int kv_size, int port, int myself) {
+    public DadkvsServerState(int kv_size, int port, int myself, DebugModes debug) {
         base_port = port;
         my_id = myself;
         i_am_leader = myself == INITIAL_LEADER_ID;
@@ -31,7 +33,7 @@ public class DadkvsServerState {
         debug_mode = 0;
         store_size = kv_size;
         store = new KeyValueStore(kv_size);
-        main_loop = new MainLoop(this);
+        main_loop = new MainLoop(this, debug);
         main_loop_worker = new Thread(main_loop);
         main_loop_worker.start();
         this.num_servers = 5;

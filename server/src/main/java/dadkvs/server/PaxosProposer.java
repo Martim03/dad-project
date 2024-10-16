@@ -29,7 +29,7 @@ public class PaxosProposer extends PaxosParticipant {
         RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch = super.getRequestArchiveStore()
                 .getNext();
         if (reqArch == null) {
-            System.out.println("\n\n\nn\n\n!!!!!!!!!!!!!!!!!!!PANIC 001!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\nn\n\n\n");
+            System.out.println("PROPOSER: \n\n\nn\n\n!!!!!!!!!!!!!!!!!!!PANIC 001!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\nn\n\n\n");
             return null;
         }
         return reqArch.getReqId();
@@ -128,7 +128,7 @@ public class PaxosProposer extends PaxosParticipant {
             CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
                     commit_collector);
             aceptorStub.phaseone(phase1Request.build(), commit_observer);
-            System.out.println("Sending Phase1 request to server");
+            System.out.println("PROPOSER: Sending Phase1 request to server");
         }
     }
 
@@ -184,14 +184,14 @@ public class PaxosProposer extends PaxosParticipant {
             CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> phase2_observer = new CollectorStreamObserver<>(
                     phase2_collector);
             aceptorStub.phasetwo(phase2Request.build(), phase2_observer);
-            System.out.println("Sending Phase2 request to server");
+            System.out.println("PROPOSER: Sending Phase2 request to server");
         }
     }
 
     private boolean waitPhaseTwoReplies(GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector,
             ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses) {
         WaitForMajority(phase2_collector, super.getServerState().getNumAceptors());
-        System.out.println("Phase 2 responses majority was received");
+        System.out.println("PROPOSER: Phase 2 responses majority was received");
         for (PhaseTwoReply phaseTwoReply : phase2_responses) {
             if (!phaseTwoReply.getPhase2Accepted()) {
                 // there is a new leader with higher ID, phase2 rejected!
