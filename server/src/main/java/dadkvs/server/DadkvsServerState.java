@@ -5,11 +5,11 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
-    // TODO ReConfiguration
 
-    final int INITIAL_CONFIG = 0;
-    final int[][] CONFIG_MEMBERS = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
-    final int INITIAL_LEADER_ID = CONFIG_MEMBERS[INITIAL_CONFIG][0];
+    private final int INITIAL_CONFIG = 0;
+    private final int KVS_CONFIG_INDEX = 0;
+    private final int[][] CONFIG_MEMBERS = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
+    private final int INITIAL_LEADER_ID = CONFIG_MEMBERS[INITIAL_CONFIG][0];
 
     private int config;
     private boolean i_am_leader;
@@ -23,7 +23,6 @@ public class DadkvsServerState {
     private int num_servers;
     private ManagedChannel[] channels;
     private DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
-    private DebugModes debug;
 
     public DadkvsServerState(int kv_size, int port, int myself, DebugModes debug) {
         base_port = port;
@@ -33,7 +32,7 @@ public class DadkvsServerState {
         debug_mode = 0;
         store_size = kv_size;
         store = new KeyValueStore(kv_size);
-        main_loop = new MainLoop(this, debug);
+        main_loop = new MainLoop(this);
         main_loop_worker = new Thread(main_loop);
         main_loop_worker.start();
         this.num_servers = 5;
@@ -62,7 +61,7 @@ public class DadkvsServerState {
     }
 
     public synchronized int[] getConfigMembers() {
-        return CONFIG_MEMBERS[config];
+        return CONFIG_MEMBERS[getConfig()];
     }
 
     public KeyValueStore getStore() {
@@ -78,7 +77,7 @@ public class DadkvsServerState {
     }
 
     public synchronized boolean isOnlyLearner() {
-        for (int member : CONFIG_MEMBERS[config]) {
+        for (int member : CONFIG_MEMBERS[getConfig()]) {
             if (my_id == member) {
                 return false;
             }
@@ -139,5 +138,13 @@ public class DadkvsServerState {
 
     public void wakeMainLoop() {
         main_loop.wakeup();
+    }
+
+    public int getKvsConfigIdx() {
+        return KVS_CONFIG_INDEX;
+    }
+
+    public int getInitialLeaderid() {
+        return INITIAL_LEADER_ID;
     }
 }

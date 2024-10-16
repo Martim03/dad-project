@@ -1,16 +1,14 @@
 package dadkvs.server;
 
 public class MainLoop implements Runnable {
-    //TODO ASK PROFESSOR WHY?
+    // TODO ASK PROFESSOR WHY USE?
 
     DadkvsServerState server_state;
-    DebugModes debug;
     private boolean has_work;
 
-    public MainLoop(DadkvsServerState state, DebugModes debug) {
+    public MainLoop(DadkvsServerState state) {
         this.server_state = state;
         this.has_work = false;
-        this.debug = debug;
     }
 
     @Override
@@ -30,13 +28,7 @@ public class MainLoop implements Runnable {
             } catch (InterruptedException e) {
             }
         }
-        if (server_state.getDebugMode() == DebugModeCodes.CRASH.getCode()) {
-            // Terminate everything with shutdownHook
-            System.exit(0);
-        }
-        else if (server_state.getDebugMode() == DebugModeCodes.UNFREEZE.getCode()){
-            debug.unfreeze();
-        }
+
         System.out.println("Main loop do work finish");
     }
 

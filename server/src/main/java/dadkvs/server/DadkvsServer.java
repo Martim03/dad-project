@@ -32,7 +32,7 @@ public class DadkvsServer {
 
         final BindableService service_impl = new DadkvsMainServiceImpl(proposer, learner, debug);
         final BindableService paxos_impl = new DadkvsPaxosServiceImpl(aceptor, learner, debug);
-        final BindableService console_impl = new DadkvsConsoleServiceImpl(state);
+        final BindableService console_impl = new DadkvsConsoleServiceImpl(state, proposer, debug);
         
         // Create a new server to listen on port.
         Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl)

@@ -25,11 +25,21 @@ public class PaxosProposer extends PaxosParticipant {
         paxosRoundsProposed++;
     }
 
+    private synchronized void checkReconfiguration(
+            RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch) {
+                
+        if (reqArch.getRequest().getWritekey() == super.getServerState().getKvsConfigIdx()) {
+            // is writing a value in the config index, therefore changing the configuration (reconfig)
+            super.getServerState().setConfig(reqArch.getRequest().getWriteval());
+        }
+    }
+
     private Integer chooseOwnProposeValue() {
         RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch = super.getRequestArchiveStore()
                 .getNext();
         if (reqArch == null) {
-            System.out.println("PROPOSER: \n\n\nn\n\n!!!!!!!!!!!!!!!!!!!PANIC 001!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\nn\n\n\n");
+            System.out.println(
+                    "PROPOSER: \n\n\n\n\n!!!!!!!!!!PANIC 001!!!!!!!!!!\n\n\n\n\n");
             return null;
         }
         return reqArch.getReqId();
@@ -85,6 +95,7 @@ public class PaxosProposer extends PaxosParticipant {
 
             // Reached the end of the paxos round successfully, go to next one
             reqArch.markUnproposable(); // mark the proposed request as unporoposable to next rounds)
+            checkReconfiguration(reqArch);
             incrementPaxosRound();
         }
     }
@@ -106,7 +117,7 @@ public class PaxosProposer extends PaxosParticipant {
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
                 phase1Responses, state.getNumAceptors());
 
-        if (state.getId() == state.INITIAL_LEADER_ID) {
+        if (state.getId() == state.getInitialLeaderid()) {
             // skip phase1 if its the first leader
             return chooseOwnProposeValue();
         }
