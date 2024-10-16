@@ -5,173 +5,39 @@ import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
+	// TODO VERIFY SYNCHRONIZED VS LOCKS
 
-        DadkvsServerState server_state;
-        CommitHandler commitHandler;
+	PaxosAceptor aceptor;
+	PaxosLearner learner;
 
-        public DadkvsPaxosServiceImpl(DadkvsServerState state, CommitHandler commitHandler) {
-                this.server_state = state;
-                this.commitHandler = commitHandler;
-        }
+	public DadkvsPaxosServiceImpl(PaxosAceptor aceptor, PaxosLearner learner) {
+		this.aceptor = aceptor;
+		this.learner = learner;
+	}
 
-        private boolean assertNotLearner(String method) {
-                if (server_state.isOnlyLearner()) {
-                        System.out.println("PANIC!!!!!!! LEARNER RECEIVING " + method);
-                        return false;
-                }
-                return true;
-        }
+	@Override
+	public void phaseone(DadkvsPaxos.PhaseOneRequest request,
+			StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
 
-        private boolean assertNotCommited(int order) {
-                if (commitHandler.getRequestByOrder(order).isCommited()) {
-                        // Already commited, skiping paxos
-                        System.err.println("Request already commited, skipping paxos");
-                        return false;
-                }
-                return true;
-        }
+		System.out.println("Receive phase1 request: " + request);
+		aceptor.receivePhaseOne(request, responseObserver);
+	}
 
-        @Override
-        public void phaseone(DadkvsPaxos.PhaseOneRequest request,
-                        StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
+	@Override
+	public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
+			StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
 
-                if (!assertNotLearner("phaseone") || !assertNotCommited(request.getPhase1Index())) {
-                        return;
-                }
+		System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val="
+				+ request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
 
-                // for debug purposes
-                System.out.println("Receive phase1 request: " + request);
+		aceptor.receivePhaseTwo(request, responseObserver);
+	}
 
-                /*
-                 * this is the request received from the leader to preppare the transaction
-                 * so the server will respond with the value of the highest accepted proposal
-                 * for the leader to understand
-                 * if it can propose a new value or was there already an ongoing transaction
-                 * that must be now completed
-                 * OR
-                 * just reject the request if the server has already accepted a higher proposal
-                 * 
-                 */
-                DadkvsPaxos.PhaseOneReply.Builder phase1_reply = DadkvsPaxos.PhaseOneReply.newBuilder();
+	@Override
+	public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
+		System.out.println("Receive learn request: " + request);
 
-                if (request.getPhase1Timestamp() < commitHandler.getRequestByOrder(request.getPhase1Index())
-                                .getReadTS()) {
-                        // reject the request
-
-                        phase1_reply.setPhase1Accepted(false);
-
-                        responseObserver.onNext(phase1_reply.build());
-                        responseObserver.onCompleted();
-                        return;
-                }
-
-                // Update the readTS of the request
-                commitHandler.getRequestByOrder(request.getPhase1Index()).setReadTS(request.getPhase1Timestamp());
-
-                int writeTS = commitHandler.getRequestByOrder(request.getPhase1Index()).getWriteTS();
-
-                phase1_reply.setPhase1Config(server_state.getConfig())
-                                .setPhase1Index(commitHandler.getRequestsProcessed())
-                                .setPhase1Timestamp(writeTS).setPhase1Accepted(true)
-                                .setPhase1Value(commitHandler.getRequestByOrder(request.getPhase1Index()).getReqId());
-
-                responseObserver.onNext(phase1_reply.build());
-                responseObserver.onCompleted();
-        }
-
-        @Override
-        public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
-                        StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
-                // for debug purposes
-
-                // TODO fix timeouts, and use debug console, use debug varaible to decide
-                // TODO SEND LEARN
-
-                if (!assertNotLearner("phasetwo") || !assertNotCommited(request.getPhase2Index())) {
-                        return;
-                }
-
-                System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val="
-                                + request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
-
-                /*
-                 * this is the request received from the leader to anounce the chosen value
-                 * so the server will respond with an OK if it hanst already accepted a higher
-                 * proposal and update the request order with the new index (but not commited)
-                 * OR
-                 * just reject the request if the server has already accepted a higher proposal
-                 * 
-                 */
-
-                DadkvsPaxos.PhaseTwoReply.Builder phase2_reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
-
-                if (request.getPhase2Timestamp() < commitHandler.getRequestByOrder(request.getPhase2Index())
-                                .getReadTS()) {
-                        // reject the request
-                        System.out.println("Rejecting phase two request: idx=" + request.getPhase2Index() + " ts="
-                                        + request.getPhase2Timestamp());
-
-                        phase2_reply.setPhase2Accepted(false);
-
-                        responseObserver.onNext(phase2_reply.build());
-                        responseObserver.onCompleted();
-                        return;
-                }
-
-                // TODO update read and write TS
-
-                // Print debug message
-                System.out.println(
-                                "Accepting phase two request: idx=" + request.getPhase2Index() + " ts="
-                                                + request.getPhase2Timestamp());
-                // Fix the requests order with the new index
-                commitHandler.SwapRequestOrder(request.getPhase2Index(), request.getPhase2Value());
-
-                // Update the writeTS of the request
-                // TODO Update the readTS of the request (is this necessary?)
-                commitHandler.getRequestByOrder(request.getPhase2Index()).setWriteTS(request.getPhase2Timestamp())
-                                .setReadTS(request.getPhase2Timestamp());
-
-                phase2_reply.setPhase2Config(server_state.getConfig()).setPhase2Index(request.getPhase2Index())
-                                .setPhase2Accepted(true);
-
-                // Print debug message
-                System.out.println(
-                                "Phase two request accepted: idx=" + request.getPhase2Index() + " ts="
-                                                + request.getPhase2Timestamp());
-
-                responseObserver.onNext(phase2_reply.build());
-                responseObserver.onCompleted();
-        }
-
-        @Override
-        public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
-                // for debug purposes
-                System.out.println("Receive learn request: " + request);
-
-                if (!assertNotCommited(request.getLearnindex())) {
-                        return;
-                }
-
-                /*
-                 * this is the request received from the leader to anounce the value to commit
-                 * so the server will take the chosen value and commit it to the store, it is
-                 * decided
-                 * 
-                 */
-
-                // TODO no need to check for the leader ID because "learns" are never rejected?
-
-                // Commit the transaction locally
-                commitHandler.SwapRequestOrder(request.getLearnindex(), request.getLearnvalue());
-                commitHandler.getRequestByOrder(request.getLearnindex()).setCommited(true);
-                commitHandler.handleCommits();
-
-                // Respond with OK
-                DadkvsPaxos.LearnReply.Builder learn_reply = DadkvsPaxos.LearnReply.newBuilder();
-
-                responseObserver.onNext(learn_reply.build());
-                responseObserver.onCompleted();
-        }
+		learner.receiveLearn(request, responseObserver);
+	}
 
 }

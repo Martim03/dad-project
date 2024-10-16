@@ -7,10 +7,10 @@ import io.grpc.stub.StreamObserver;
 
 public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleServiceImplBase {
 
-    DadkvsServerState server_state;
+    DadkvsServerState state;
 
     public DadkvsConsoleServiceImpl(DadkvsServerState state) {
-        this.server_state = state;
+        this.state = state;
     }
 
     @Override
@@ -19,12 +19,12 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
         System.out.println(request);
 
         boolean response_value = true;
-        this.server_state.i_am_leader = request.getIsleader();
+        state.setLeader(request.getIsleader());
 
         // for debug purposes
-        System.out.println("I am the leader = " + this.server_state.i_am_leader);
+        System.out.println("I am the leader = " + this.state.i_am_leader);
 
-        this.server_state.main_loop.wakeup();
+        this.state.main_loop.wakeup();
 
         DadkvsConsole.SetLeaderReply response = DadkvsConsole.SetLeaderReply.newBuilder()
                 .setIsleaderack(response_value).build();
@@ -40,11 +40,11 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 
         boolean response_value = true;
 
-        this.server_state.debug_mode = request.getMode();
-        this.server_state.main_loop.wakeup();
+        this.state.debug_mode = request.getMode();
+        this.state.main_loop.wakeup();
 
         // for debug purposes
-        System.out.println("Setting debug mode to = " + this.server_state.debug_mode);
+        System.out.println("Setting debug mode to = " + this.state.debug_mode);
 
         DadkvsConsole.SetDebugReply response = DadkvsConsole.SetDebugReply.newBuilder()
                 .setAck(response_value).build();
