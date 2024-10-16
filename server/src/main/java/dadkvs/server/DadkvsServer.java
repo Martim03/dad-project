@@ -1,18 +1,14 @@
 package dadkvs.server;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import dadkvs.DadkvsMain;
-import dadkvs.util.RequestArchive;
+import dadkvs.util.PaxosLog;
+import dadkvs.util.RequestArchiveStore;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 public class DadkvsServer {
 
-    static DadkvsServerState server_state;
+    static DadkvsServerState state;
 
     /**
      * Server host port.
@@ -27,15 +23,19 @@ public class DadkvsServer {
         int base_port = Integer.parseInt(args[0]);
         int my_id = Integer.parseInt(args[1]);
 
-        server_state = new DadkvsServerState(kvsize, base_port, my_id);
-
-        CommitHandler handler = new CommitHandler(server_state);
+        state = new DadkvsServerState(kvsize, base_port, my_id);
 
         port = base_port + my_id;
 
-        final BindableService service_impl = new DadkvsMainServiceImpl(server_state,handler, my_id);
-        final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
-        final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state, handler);
+        RequestArchiveStore requestArchiveStore = new RequestArchiveStore();
+        PaxosLog paxosLog = new PaxosLog();
+        PaxosProposer proposer = new PaxosProposer(state, requestArchiveStore, paxosLog);
+        PaxosAceptor aceptor = new PaxosAceptor(state, requestArchiveStore, paxosLog);
+        PaxosLearner learner = new PaxosLearner(state, requestArchiveStore, paxosLog);
+
+        final BindableService service_impl = new DadkvsMainServiceImpl(proposer, learner);
+        final BindableService paxos_impl = new DadkvsPaxosServiceImpl(aceptor, learner);
+        final BindableService console_impl = new DadkvsConsoleServiceImpl(state);
         
         // Create a new server to listen on port.
         Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl)

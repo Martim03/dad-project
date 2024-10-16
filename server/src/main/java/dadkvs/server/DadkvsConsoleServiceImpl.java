@@ -6,7 +6,6 @@ import dadkvs.DadkvsConsoleServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleServiceImplBase {
-
     DadkvsServerState state;
 
     public DadkvsConsoleServiceImpl(DadkvsServerState state) {
@@ -14,7 +13,8 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
     }
 
     @Override
-    public void setleader(DadkvsConsole.SetLeaderRequest request, StreamObserver<DadkvsConsole.SetLeaderReply> responseObserver) {
+    public void setleader(DadkvsConsole.SetLeaderRequest request,
+            StreamObserver<DadkvsConsole.SetLeaderReply> responseObserver) {
         // for debug purposes
         System.out.println(request);
 
@@ -22,9 +22,9 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
         state.setLeader(request.getIsleader());
 
         // for debug purposes
-        System.out.println("I am the leader = " + this.state.i_am_leader);
+        System.out.println("I am the leader = " + state.isLeader());
 
-        this.state.main_loop.wakeup();
+        this.state.wakeMainLoop();
 
         DadkvsConsole.SetLeaderReply response = DadkvsConsole.SetLeaderReply.newBuilder()
                 .setIsleaderack(response_value).build();
@@ -34,17 +34,18 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
     }
 
     @Override
-    public void setdebug(DadkvsConsole.SetDebugRequest request, StreamObserver<DadkvsConsole.SetDebugReply> responseObserver) {
+    public void setdebug(DadkvsConsole.SetDebugRequest request,
+            StreamObserver<DadkvsConsole.SetDebugReply> responseObserver) {
         // for debug purposes
         System.out.println(request);
 
         boolean response_value = true;
 
-        this.state.debug_mode = request.getMode();
-        this.state.main_loop.wakeup();
+        state.setDebugMode(request.getMode());
+        state.wakeMainLoop();
 
         // for debug purposes
-        System.out.println("Setting debug mode to = " + this.state.debug_mode);
+        System.out.println("Setting debug mode to = " + state.getDebugMode());
 
         DadkvsConsole.SetDebugReply response = DadkvsConsole.SetDebugReply.newBuilder()
                 .setAck(response_value).build();

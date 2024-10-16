@@ -1,5 +1,6 @@
 package dadkvs.server;
 
+import dadkvs.util.GenericResponseCollector;
 import dadkvs.util.PaxosLog;
 import dadkvs.util.RequestArchiveStore;
 
@@ -24,5 +25,9 @@ public class PaxosParticipant {
 
     public PaxosLog getPaxosLog() {
         return paxosLog;
+    }
+
+    public void WaitForMajority(GenericResponseCollector responseCollector, int sentRequests) {
+        responseCollector.waitForTarget((sentRequests / 2) + 1);
     }
 }

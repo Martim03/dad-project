@@ -8,8 +8,6 @@ import dadkvs.DadkvsMain;
 import dadkvs.DadkvsMainServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
-// TODO always put if statements to check if the request was alaready comitted and no work is necessary! 
-
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
     PaxosProposer proposer;
     PaxosLearner learner;

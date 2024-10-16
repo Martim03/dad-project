@@ -47,6 +47,7 @@ public class RequestArchive<ReqT, RespT> {
         return this;
     }
 
+    // Called by the proposer after successfully proposing this request
     public synchronized void markUnproposable() {
         this.proposable = false;
     }

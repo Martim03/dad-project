@@ -21,21 +21,30 @@ public class PaxosLearner extends PaxosParticipant {
 	 * so the server will take the chosen value and commit it to the store, it is
 	 * decided.
 	 */
-	public void receiveLearn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
+	public void receiveLearn(DadkvsPaxos.LearnRequest request,
+			StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
+
 		System.out.println("Receive learn request: " + request);
 
-		// TODO wait for majority
+		// reply to the sender with "empty" message
+		DadkvsPaxos.LearnReply.Builder learn_reply = DadkvsPaxos.LearnReply.newBuilder();
+		responseObserver.onNext(learn_reply.build());
+		responseObserver.onCompleted();
 
+		boolean hasMajority = true; // TODO wait for majority
+
+		if (!hasMajority) {
+			// if there is no majority just keep "waiting" and do nothing
+			return;
+		}
+
+		// having a majority can procede to commit the request for this order
 		super.getPaxosLog().commitPropose(requestsProcessed,
 				new PaxosProposal().setReadTS(request.getLearntimestamp()).setWriteTS(request.getLearntimestamp())
 						.setReqId(request.getLearnvalue()).setCommited(true));
 
+		// try to execute the request if all the requirements are met
 		handleCommits();
-
-		DadkvsPaxos.LearnReply.Builder learn_reply = DadkvsPaxos.LearnReply.newBuilder();
-
-		responseObserver.onNext(learn_reply.build());
-		responseObserver.onCompleted();
 	}
 
 	/** Learner receives client Request and stores it in RequestArchive */
@@ -51,7 +60,12 @@ public class PaxosLearner extends PaxosParticipant {
 	/**
 	 * Learner executes all requests that are currently ready to be executed
 	 * (after executing a request it will try to execute all consecutive requests
-	 * that were "waiting")
+	 * that were "waiting").
+	 * Note that since it always just tries to execute the next request based on
+	 * how many requests it already executed , even if an already commited request
+	 * is commited again it wont execute again because it wont check for
+	 * older(comitted)
+	 * requests, only the next ones
 	 */
 	private synchronized void handleCommits() {
 		PaxosLog paxosLog = super.getPaxosLog();

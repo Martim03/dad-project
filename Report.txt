@@ -37,7 +37,7 @@ StateCommitHandler: has the task to execute(commit to the "DB") the requests whe
 
     PROTOCOL/MESSAGES
 
-On the Receiver side: TODO ask teacher::: it will work because they will accept again
+On the Receiver side:
 - Receiving paxos round that has been commited means leader is outdatted 
     --> send NACK which means dont let the outdated server be leader and force him to keep retrying until he learns
 
@@ -164,7 +164,7 @@ SimpleProject Assumptions:
     - Leader Executing Paxos:
         - Message was majority accepted -> Continue
         - got ANY refuse message:
-            - dont wait any timeout just keep on repeating (increment id)! TODO ask teacher
+            - dont wait any timeout just keep on repeating (increment id)!
             - Eventually could receive a setLeaderOFF and just give up this process (use locks for the reading of isLeader)
 
  ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ SimpleProject Assumptions:
 - Be careful with concurrency on the config variables used to check if leader, if learner, if etc...)
 - When configMode is changed propagate the state variables so the code is "updated"
      (may be unnecessary if it always do THEAD SAFE reads on the config variables before executing)
-- Are VIEWS needed? probabbly not for step 3 TODO ask teacher
+- Are VIEWS needed? probabbly not for step 3
 - Ensure concurrency between changin config and PaxosProcesses goes smooth (again just maybe always read 
                                                                                 the variables when neeeded)
 - Para o step 4 , see views, see vertical paxos, stoppable paxos, maybe centralized config unit

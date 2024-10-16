@@ -3,6 +3,7 @@ package dadkvs.server;
 import java.util.ArrayList;
 
 import dadkvs.DadkvsPaxos;
+import dadkvs.DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 import dadkvs.util.PaxosLog;
@@ -72,7 +73,13 @@ public class PaxosAceptor extends PaxosParticipant {
 				+ request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
 
 		PaxosLog paxosLog = super.getPaxosLog();
+
 		PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase2Index());
+		if (currentProposal == null) {
+			// if it does not exist answer with default values (0, 0, -1)
+			currentProposal = new PaxosProposal();
+		}
+
 		DadkvsPaxos.PhaseTwoReply.Builder phase2Reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
 
 		if (request.getPhase2Timestamp() < currentProposal.getReadTS()) {
@@ -120,14 +127,16 @@ public class PaxosAceptor extends PaxosParticipant {
 
 		ArrayList<DadkvsPaxos.LearnReply> learnResponses = new ArrayList<>();
 		GenericResponseCollector<DadkvsPaxos.LearnReply> commit_collector = new GenericResponseCollector<>(
-				learnResponses, state.getNumServers());
+				learnResponses, state.getNumLearners());
 
-		for (int i = 0; i < state.getNumServers(); i++) {
+		for (DadkvsPaxosServiceStub learnerStub : state.getLearnerStubs()) {
 			CollectorStreamObserver<DadkvsPaxos.LearnReply> commit_observer = new CollectorStreamObserver<>(
 					commit_collector);
-			state.getAsyncStubs()[i].learn(learnRequest.build(), commit_observer);
-			System.out.println("Sending Learn request to server " + i);
+			learnerStub.learn(learnRequest.build(), commit_observer);
+			System.out.println("Sending Learn request to server");
 		}
-		// TODO figure out how to wait
+
+		commit_collector.waitForTarget(state.getNumLearners()); // TODO figure out how to wait without blocking the
+																// thread since the responses dont matter
 	}
 }

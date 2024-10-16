@@ -88,6 +88,14 @@ public class DadkvsServerState {
         this.my_id = my_id;
     }
 
+    public synchronized int getDebugMode() {
+        return debug_mode;
+    }
+
+    public synchronized void setDebugMode(int debug_mode) {
+        this.debug_mode = debug_mode;
+    }
+
     public synchronized void incrementId() {
         setId(getId() + getNumServers());
     }
@@ -96,7 +104,7 @@ public class DadkvsServerState {
         return my_id;
     }
 
-    public synchronized int getNumServers() {
+    private synchronized int getNumServers() {
         return num_servers;
     }
 
@@ -110,5 +118,24 @@ public class DadkvsServerState {
 
     public synchronized int getNumAceptors() {
         return CONFIG_MEMBERS[this.getConfig()].length;
+    }
+
+    public synchronized DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] getAceptorStubs() {
+        int[] configMembers = getConfigMembers();
+        DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] stubs = new DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[configMembers.length];
+
+        for (int i = 0; i < configMembers.length; i++) {
+            stubs[i] = async_stubs[configMembers[i]];
+        }
+
+        return stubs;
+    }
+
+    public synchronized DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] getLearnerStubs() {
+        return async_stubs;
+    }
+
+    public void wakeMainLoop() {
+        main_loop.wakeup();
     }
 }

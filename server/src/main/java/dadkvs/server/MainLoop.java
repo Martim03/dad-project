@@ -1,6 +1,7 @@
 package dadkvs.server;
 
 public class MainLoop implements Runnable {
+    //TODO ASK PROFESSOR WHY?
 
     DadkvsServerState server_state;
 
