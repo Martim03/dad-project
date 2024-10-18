@@ -23,6 +23,7 @@ public class PaxosProposer extends PaxosParticipant {
 
     private synchronized void incrementPaxosRound() {
         paxosRoundsProposed++;
+        System.out.println(".................................................. PAXOS: " + (paxosRoundsProposed-1) + " --> " + paxosRoundsProposed);
     }
 
     private synchronized void checkReconfiguration(
@@ -139,7 +140,7 @@ public class PaxosProposer extends PaxosParticipant {
             CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
                     commit_collector);
             aceptorStub.phaseone(phase1Request.build(), commit_observer);
-            System.out.println("PROPOSER: Sending Phase1 request to server");
+            System.out.println("PROPOSER: Sending Phase1 request to server (order: " + paxosRoundsProposed + ")");
         }
     }
 
@@ -161,9 +162,11 @@ public class PaxosProposer extends PaxosParticipant {
         }
 
         if (latestValue == null) {
+            System.out.println("PROPOSER: CHOOSING OWN VALUE");
             // chooses own value
             return chooseOwnProposeValue();
         } else {
+            System.out.println("PROPOSER: VALUE ALREADY EXISTS");
             // choose the value with the highest writeTS
             return latestValue;
         }

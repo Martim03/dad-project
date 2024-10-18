@@ -98,6 +98,8 @@ public class DadkvsServerState {
     }
 
     public synchronized void incrementId() {
+        int n = getId() + getNumServers();
+        System.out.println("Incremented from " + getId() + " to " + n);
         setId(getId() + getNumServers());
     }
 

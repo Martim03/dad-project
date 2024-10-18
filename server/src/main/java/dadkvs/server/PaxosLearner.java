@@ -1,5 +1,10 @@
 package dadkvs.server;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.random.RandomGenerator.LeapableGenerator;
+
 import dadkvs.DadkvsMain;
 import dadkvs.DadkvsPaxos;
 import dadkvs.util.PaxosLog;
@@ -10,10 +15,12 @@ import io.grpc.stub.StreamObserver;
 
 public class PaxosLearner extends PaxosParticipant {
 	private int requestsProcessed;
+	LearnCounter learnCounter;
 
 	public PaxosLearner(DadkvsServerState state, RequestArchiveStore requestArchiveStore, PaxosLog paxosLog) {
 		super(state, requestArchiveStore, paxosLog);
 		requestsProcessed = 0;
+		learnCounter = new LearnCounter();
 	}
 
 	/**
@@ -31,20 +38,21 @@ public class PaxosLearner extends PaxosParticipant {
 		responseObserver.onNext(learn_reply.build());
 		responseObserver.onCompleted();
 
-		boolean hasMajority = true; // TODO wait for majority
+		int order = request.getLearnindex();
+		int leaderId = request.getLearntimestamp();
+		int learnCount = learnCounter.incrementCounter(order, leaderId);
 
-		if (!hasMajority) {
-			// if there is no majority just keep "waiting" and do nothing
-			return;
+		if (learnCount >= (super.getServerState().getNumAceptors() / 2 + 1)) {
+			// having a majority can procede to commit the request for this order
+			super.getPaxosLog().commitPropose(request.getLearnindex(),
+					new PaxosProposal().setReadTS(request.getLearntimestamp()).setWriteTS(request.getLearntimestamp())
+							.setReqId(request.getLearnvalue()).setCommited(true));
+			System.out.println("::::::::::::::::::::::: NEW PROPOSAL --> " + "order: " + request.getLearnindex() + ", reqId: "
+					+ request.getLearnvalue());
+
+			// try to execute the request if all the requirements are met
+			handleCommits();
 		}
-
-		// having a majority can procede to commit the request for this order
-		super.getPaxosLog().commitPropose(requestsProcessed,
-				new PaxosProposal().setReadTS(request.getLearntimestamp()).setWriteTS(request.getLearntimestamp())
-						.setReqId(request.getLearnvalue()).setCommited(true));
-
-		// try to execute the request if all the requirements are met
-		handleCommits();
 	}
 
 	/** Learner receives client Request and stores it in RequestArchive */
@@ -85,7 +93,8 @@ public class PaxosLearner extends PaxosParticipant {
 			int writeval = request.getWriteval();
 
 			System.out.println(
-					"LEARNER: >>> EXECUTING:\n reqid " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 "
+					"LEARNER: >>> EXECUTING:\n reqid " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2
+							+ " v2 "
 							+ version2 + " wk " + writekey + " writeval " + writeval);
 
 			TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
@@ -93,7 +102,8 @@ public class PaxosLearner extends PaxosParticipant {
 
 			boolean commit_success = super.getServerState().getStore().commit(txrecord);
 
-			requestArchiveStore.removeRequest(reqId);
+			//TODO IF WE WANT TO CLEAR THE LIST WE NEED TO UPDATE THE CURSOR
+			//requestArchiveStore.removeRequest(reqId);
 
 			this.requestsProcessed++;
 
