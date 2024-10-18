@@ -148,13 +148,15 @@ public class PaxosProposer extends PaxosParticipant {
             ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses) {
 
         Integer latestValue = null;
-        int highestWriteTS = 0;
+        int highestWriteTS = -1;
         WaitForMajority(commit_collector, super.getServerState().getNumAceptors());
         for (PhaseOneReply phaseOneReply : phase1Responses) {
             if (!phaseOneReply.getPhase1Accepted()) {
                 // there is a new leader with higher ID, phase1 rejected!
                 return null;
             }
+
+            System.out.println("PROPOSER: CHECKING: " + phaseOneReply.getPhase1Timestamp() + " > " + highestWriteTS);
             if (phaseOneReply.getPhase1Timestamp() > highestWriteTS) {
                 highestWriteTS = phaseOneReply.getPhase1Timestamp();
                 latestValue = phaseOneReply.getPhase1Value();

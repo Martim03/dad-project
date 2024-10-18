@@ -7,8 +7,8 @@ public class PaxosProposal {
 
     public PaxosProposal() {
         this.reqId = -1;
-        this.writeTS = 0;
-        this.readTS = 0;
+        this.writeTS = -1;
+        this.readTS = -1;
         this.commited = false;
     }
 
