@@ -1,24 +1,28 @@
 package dadkvs.test;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 
 public abstract class Process {
-    private String processPath;
+    private final String command;
     private java.lang.Process process;
-    private BufferedReader processOutput;
+    private BufferedReader processError;
     private BufferedWriter processInput;
 
-    public Process(String processPath) {
-        this.processPath = processPath;
+    public Process(String command) {
+        this.command = command;
     }
 
     public void start() throws IOException {
-        ProcessBuilder builder = new ProcessBuilder(processPath);
-        builder.redirectErrorStream(true); // Merges stderr with stdout
+        ProcessBuilder builder = new ProcessBuilder(command.split(" "));
+        builder.redirectErrorStream(false); // Separate stderr from stdout
         this.process = builder.start();
 
-        // Create a separate stream for reading from stdout
-        processOutput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        // Create a separate stream for reading from stderr
+        processError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
         // Create a separate stream for writing to stdin
         processInput = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
@@ -31,8 +35,8 @@ public abstract class Process {
     }
 
     public String read() throws IOException {
-        if (processOutput != null) {
-            return processOutput.readLine(); // Reads one line from the process' stdout
+        if (processError != null) {
+            return processError.readLine(); // Reads one line from the process' stderr
         }
         return null;
     }

@@ -1,7 +1,10 @@
 package dadkvs.test;
 
-public class Server extends Process {
-    public Server(int id, int basePort) {
-        super("mvn exec:java -Dexec.args=\"" + basePort + " " + id + "\"");
+public class ServerProcess extends Process {
+
+    private final static String MVN_EXEC = "mvn exec:java -f ../server/pom.xml";
+    
+    public ServerProcess(int id, int basePort) {
+        super(MVN_EXEC + " -Dexec.args=\"" + basePort + " " + id + "\"");
     }
 }

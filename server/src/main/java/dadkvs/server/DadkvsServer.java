@@ -41,6 +41,8 @@ public class DadkvsServer {
         server.start();
         // Server threads are running in the background.
         System.out.println("Server started");
+        System.err.println("DEBUG: Server started");
+
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down gRPC server immediately...");

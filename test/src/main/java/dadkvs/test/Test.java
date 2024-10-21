@@ -1,12 +1,16 @@
 package dadkvs.test;
 
+import java.io.IOException;
+
 public abstract class Test {
-    private ServerProcess[] servers;
-    private ClientProcess[] clients;
-    private Console console;
-    private int basePort;
+    private final ServerProcess[] servers;
+    private final ClientProcess[] clients;
+    private ConsoleProcess console;
+    private final int basePort;
+    private final String name;
 
     public Test(String name, int basePort, int numServers, int numClients) {
+        this.name = name;
         servers = new ServerProcess[numServers];
         clients = new ClientProcess[numClients];
         this.basePort = basePort;
@@ -22,7 +26,7 @@ public abstract class Test {
  
         boolean success = checkSuccess();
         String testStatus = success ? "SUCCESS" : "FAILED";
-        System.out.println(this.name + ": " +  testStatus)
+        System.out.println(this.name + ": " +  testStatus);
 
         cleanup();
 
@@ -45,11 +49,13 @@ public abstract class Test {
             }
 
             // Initialize and start the admin console
-            console = new Console();
+            console = new ConsoleProcess();
             console.start();
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error initializing test: " + e.getMessage());
+            cleanup();
+            System.exit(-1);
         }
     }
 
@@ -98,12 +104,15 @@ public abstract class Test {
     }
 
     // Accessor to retrieve the console
-    protected Console getConsole() {
+    protected ConsoleProcess getConsole() {
         return console;
     }
 
     protected void sleepNSeconds(int n) {
-        // TODO
-        return;   
+        try {
+            Thread.sleep(n * 1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
