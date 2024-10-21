@@ -3,6 +3,8 @@ package dadkvs.test;
 import java.io.IOException;
 
 public abstract class Test {
+    private static final int INIT_WAIT_TIME_SECONDS = 5;
+
     private final ServerProcess[] servers;
     private final ClientProcess[] clients;
     private ConsoleProcess console;
@@ -44,13 +46,16 @@ public abstract class Test {
 
             // Initialize clients with different configurations
             for (int i = 0; i < clients.length; i++) {
-                clients[i] = new ClientProcess(i + 1, basePort, "keyrange" + (i + 1), "sleep" + (i + 1), "loop" + (i + 1), "interactive", "--delay 0 0");
+                clients[i] = new ClientProcess(i + 1, basePort);
                 clients[i].start();
             }
 
             // Initialize and start the admin console
-            console = new ConsoleProcess();
+            console = new ConsoleProcess(basePort);
             console.start();
+
+            // Sleep for a few seconds to allow the servers to start
+            sleepNSeconds(INIT_WAIT_TIME_SECONDS);
 
         } catch (IOException e) {
             System.err.println("Error initializing test: " + e.getMessage());
