@@ -31,7 +31,7 @@ public class PaxosAceptor extends PaxosParticipant {
 		PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase1Index());
 
 		if (currentProposal == null) {
-			// if it does not exist answer with default values (0, 0, -1)
+			// if it does not exist answer with default values (-1, -1, -1)
 			currentProposal = new PaxosProposal();
 		}
 

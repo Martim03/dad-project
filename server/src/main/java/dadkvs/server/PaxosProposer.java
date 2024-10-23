@@ -10,6 +10,7 @@ import dadkvs.DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 import dadkvs.util.PaxosLog;
+import dadkvs.util.PaxosProposal;
 import dadkvs.util.RequestArchive;
 import dadkvs.util.RequestArchiveStore;
 
@@ -23,14 +24,18 @@ public class PaxosProposer extends PaxosParticipant {
 
     private synchronized void incrementPaxosRound() {
         paxosRoundsProposed++;
-        System.out.println(".................................................. PAXOS: " + (paxosRoundsProposed-1) + " --> " + paxosRoundsProposed);
+        System.out.println(".................................................. PAXOS: " + (paxosRoundsProposed - 1)
+                + " --> " + paxosRoundsProposed);
     }
 
     private synchronized void checkReconfiguration(
             RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch) {
-                
+
+        // TODO could be otimized in a way so that it doesnt need to have the request to know 
+        // the reconfigs and instead it uses the 'config' filed of the messages to anounce changes 
         if (reqArch.getRequest().getWritekey() == super.getServerState().getKvsConfigIdx()) {
-            // is writing a value in the config index, therefore changing the configuration (reconfig)
+            // is writing a value in the config index, therefore changing the configuration
+            // (reconfig)
             super.getServerState().setConfig(reqArch.getRequest().getWriteval());
         }
     }
@@ -72,8 +77,19 @@ public class PaxosProposer extends PaxosParticipant {
 
         while (true) {
             // Start a Paxos Round
+            // TODO is a bit weird might be always looping some times
+            PaxosProposal prop = super.getPaxosLog().getPropose(paxosRoundsProposed);
+            if (prop != null && prop.isCommited()) {
+                // Skiping round because it was already commited
 
-            iAmLeader = super.getServerState().isLeader();
+                reqArch = super.getRequestArchiveStore().getRequest(prop.getReqId());
+                if (reqArch != null) {
+                    advancePaxosRound(reqArch);
+                }
+                continue;
+            }
+
+            iAmLeader = super.getServerState().isValidLeader();
             reqArch = super.getRequestArchiveStore().getNext();
             thereAreRequestsToPropose = (reqArch != null);
             if (!(iAmLeader && thereAreRequestsToPropose)) {
@@ -94,15 +110,19 @@ public class PaxosProposer extends PaxosParticipant {
                 continue;
             }
 
-            // Reached the end of the paxos round successfully, go to next one
-            reqArch.markUnproposable(); // mark the proposed request as unporoposable to next rounds)
-            checkReconfiguration(reqArch);
-            incrementPaxosRound();
+            advancePaxosRound(reqArch);
         }
     }
 
+    private void advancePaxosRound(RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch) {
+        // Reached the end of the paxos round successfully, go to next one
+        reqArch.markUnproposable(); // mark the proposed request as unporoposable to next rounds)
+        checkReconfiguration(reqArch);
+        incrementPaxosRound();
+    }
+
     private void incrementLeaderId() {
-        super.getServerState().incrementId();
+        super.getServerState().incrementBallotNumber();
     }
 
     /**
@@ -118,7 +138,7 @@ public class PaxosProposer extends PaxosParticipant {
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
                 phase1Responses, state.getNumAceptors());
 
-        if (state.getId() == state.getInitialLeaderid()) {
+        if (state.getBallotNumber() == state.getInitialLeaderid()) {
             // skip phase1 if its the first leader
             return chooseOwnProposeValue();
         }
@@ -134,7 +154,7 @@ public class PaxosProposer extends PaxosParticipant {
         DadkvsPaxos.PhaseOneRequest.Builder phase1Request = DadkvsPaxos.PhaseOneRequest.newBuilder();
         phase1Request.setPhase1Config(state.getConfig())
                 .setPhase1Index(paxosRoundsProposed)
-                .setPhase1Timestamp(state.getId());
+                .setPhase1Timestamp(state.getBallotNumber());
 
         for (DadkvsPaxosServiceStub aceptorStub : state.getAceptorStubs()) {
             CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
@@ -193,7 +213,7 @@ public class PaxosProposer extends PaxosParticipant {
         DadkvsPaxos.PhaseTwoRequest.Builder phase2Request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
         phase2Request.setPhase2Config(state.getConfig())
                 .setPhase2Index(paxosRoundsProposed)
-                .setPhase2Timestamp(state.getId())
+                .setPhase2Timestamp(state.getBallotNumber())
                 .setPhase2Value(reqId);
 
         for (DadkvsPaxosServiceStub aceptorStub : state.getAceptorStubs()) {

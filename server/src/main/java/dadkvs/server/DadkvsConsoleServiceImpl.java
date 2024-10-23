@@ -36,7 +36,7 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
         state.setLeader(isLeader);
 
         // for debug purposes
-        System.out.println("I am the leader = " + state.isLeader());
+        System.out.println("I am the leader = " + state.isValidLeader());
 
         this.state.wakeMainLoop(); // TODO are main loops necessary?
 

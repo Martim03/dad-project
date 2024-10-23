@@ -10,12 +10,13 @@ public class DadkvsServerState {
     private final int KVS_CONFIG_INDEX = 0;
     private final int[][] CONFIG_MEMBERS = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
     private final int INITIAL_LEADER_ID = CONFIG_MEMBERS[INITIAL_CONFIG][0];
+    private final int SERVER_ID;
 
     private int config;
     private boolean i_am_leader;
     private int debug_mode;
     private int base_port;
-    private int my_id;
+    private int ballotNumber;
     private int store_size;
     private KeyValueStore store;
     private MainLoop main_loop;
@@ -26,7 +27,8 @@ public class DadkvsServerState {
 
     public DadkvsServerState(int kv_size, int port, int myself, DebugModes debug) {
         base_port = port;
-        my_id = myself;
+        SERVER_ID = myself;
+        ballotNumber = SERVER_ID;
         i_am_leader = myself == INITIAL_LEADER_ID;
         config = INITIAL_CONFIG;
         debug_mode = 0;
@@ -57,6 +59,7 @@ public class DadkvsServerState {
     }
 
     public synchronized void setConfig(int config) {
+        System.out.println("########## config: " + config);
         this.config = config;
     }
 
@@ -68,8 +71,11 @@ public class DadkvsServerState {
         return store;
     }
 
-    public synchronized boolean isLeader() {
-        return i_am_leader;
+    /**
+     * @return true if its set as leader and belongs to the current configuration of proposers/aceptors
+     */
+    public synchronized boolean isValidLeader() {
+        return i_am_leader && !isOnlyLearner();
     }
 
     public synchronized void setLeader(boolean leader) {
@@ -78,15 +84,15 @@ public class DadkvsServerState {
 
     public synchronized boolean isOnlyLearner() {
         for (int member : CONFIG_MEMBERS[getConfig()]) {
-            if (my_id == member) {
+            if (SERVER_ID == member) {
                 return false;
             }
         }
         return true;
     }
 
-    public synchronized void setId(int my_id) {
-        this.my_id = my_id;
+    public synchronized void setBallotNumber(int ballotNumber) {
+        this.ballotNumber = ballotNumber;
     }
 
     public synchronized int getDebugMode() {
@@ -97,14 +103,14 @@ public class DadkvsServerState {
         this.debug_mode = debug_mode;
     }
 
-    public synchronized void incrementId() {
-        int n = getId() + getNumServers();
-        System.out.println("Incremented from " + getId() + " to " + n);
-        setId(getId() + getNumServers());
+    public synchronized void incrementBallotNumber() {
+        int n = getBallotNumber() + getNumServers();
+        System.out.println("Incremented from " + getBallotNumber() + " to " + n);
+        setBallotNumber(n);
     }
 
-    public synchronized int getId() {
-        return my_id;
+    public synchronized int getBallotNumber() {
+        return ballotNumber;
     }
 
     private synchronized int getNumServers() {
