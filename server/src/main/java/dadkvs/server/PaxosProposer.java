@@ -31,8 +31,6 @@ public class PaxosProposer extends PaxosParticipant {
     private synchronized void checkReconfiguration(
             RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch) {
 
-        // TODO could be otimized in a way so that it doesnt need to have the request to know 
-        // the reconfigs and instead it uses the 'config' filed of the messages to anounce changes 
         if (reqArch.getRequest().getWritekey() == super.getServerState().getKvsConfigIdx()) {
             // is writing a value in the config index, therefore changing the configuration
             // (reconfig)
@@ -76,26 +74,41 @@ public class PaxosProposer extends PaxosParticipant {
         boolean thereAreRequestsToPropose;
 
         while (true) {
-            // Start a Paxos Round
-            // TODO is a bit weird might be always looping some times
+
+            // Check if can skip some rounds that were already proposed by other paxos
+            // leaders
             PaxosProposal prop = super.getPaxosLog().getPropose(paxosRoundsProposed);
             if (prop != null && prop.isCommited()) {
-                // Skiping round because it was already commited
+                // round is already commited might be skippable
 
                 reqArch = super.getRequestArchiveStore().getRequest(prop.getReqId());
-                if (reqArch != null) {
-                    advancePaxosRound(reqArch);
+                if (reqArch == null) {
+                    // TODO could be otimized in a way so that it doesnt need to have the request to
+                    // know the reconfigs and instead it uses the 'config' field of the messages to
+                    // anounce config changes
+
+
+                    // cant advance to the next paxos round if it doesnt know the
+                    // request yet (could be a reconfig), just go to "sleep" until the request
+                    // arrives
+                    break;
                 }
-                continue; // TODO should be 'break' if it didnt advance the round?
+
+                // Skiping round because it was already commited and request was known
+                advancePaxosRound(reqArch);
+                continue;
             }
 
+            // check if is still a valid leader and can start the paxos round
             iAmLeader = super.getServerState().isValidLeader();
             reqArch = super.getRequestArchiveStore().getNext();
             thereAreRequestsToPropose = (reqArch != null);
             if (!(iAmLeader && thereAreRequestsToPropose)) {
-                // If im not leader or there are no requests to propose, go to "sleep"
+                // If im not a valid leader or there are no requests to propose, go to "sleep"
                 break;
             }
+
+            // Start a Paxos Round
 
             Integer reqIdToPropose = executePhaseOne();
             if (reqIdToPropose == null) {
