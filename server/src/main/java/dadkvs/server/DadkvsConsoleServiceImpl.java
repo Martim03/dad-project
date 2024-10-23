@@ -36,9 +36,9 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
         state.setLeader(isLeader);
 
         // for debug purposes
-        System.out.println("I am the leader = " + state.isValidLeader());
+        System.out.println("I am Valid leader = " + state.isValidLeader());
 
-        this.state.wakeMainLoop(); // TODO are main loops necessary?
+        this.state.wakeMainLoop();
 
         if (isLeader) {
             // if the leader status was changed to ON then wake up the proposer

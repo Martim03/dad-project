@@ -5,8 +5,6 @@ import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
-	// TODO VERIFY SYNCHRONIZED VS LOCKS
-
 	PaxosAcceptor acceptor;
 	PaxosLearner learner;
 	DebugModes debug;

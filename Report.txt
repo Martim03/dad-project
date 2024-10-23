@@ -53,7 +53,7 @@ Phase2(Accept):
     - Write the proposed value for order(idx):
         [PaxosOrderer.setPropose(idx, val)]
             ^ maybe update here the writeTS (and the ReadTS???)
-    - Update writeTS (And readTS???) TODO ask teacher
+    - Update writeTS (And readTS???)
     - (Send Learn??? Check this optimization implications -> MUST CHANGE LEARN/COMMIT TO WAIT FOR A MAJORITY NOW!!!!)
 
 Learn:
