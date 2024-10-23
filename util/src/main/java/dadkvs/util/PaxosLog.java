@@ -12,13 +12,13 @@ public class PaxosLog {
         orderedRequestsMap = new ConcurrentHashMap<>();
     }
 
-    /** (Aceptor POV) Called by PhaseOne: Returns the current propose (reqId, readTs, writeTs), 
+    /** (Acceptor POV) Called by PhaseOne: Returns the current propose (reqId, readTs, writeTs), 
      * if its null there is no proposal so the Proposer must choose */
     public PaxosProposal getPropose(int order) {
         return orderedRequestsMap.get(order);
     }
 
-    /** (Aceptor POV) Called by PhaseTwo: Sets a proposal for a given order */
+    /** (Acceptor POV) Called by PhaseTwo: Sets a proposal for a given order */
     public void setPropose(int order, PaxosProposal propose) {
         orderedRequestsMap.put(order, propose);
     }

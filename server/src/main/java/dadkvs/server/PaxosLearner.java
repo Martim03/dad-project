@@ -42,7 +42,7 @@ public class PaxosLearner extends PaxosParticipant {
 		int leaderId = request.getLearntimestamp();
 		int learnCount = learnCounter.incrementCounter(order, leaderId);
 
-		if (learnCount >= (super.getServerState().getNumAceptors() / 2 + 1)) {
+		if (learnCount >= (super.getServerState().getNumAcceptors() / 2 + 1)) {
 			// having a majority can procede to commit the request for this order
 			super.getPaxosLog().commitPropose(request.getLearnindex(),
 					new PaxosProposal().setReadTS(request.getLearntimestamp()).setWriteTS(request.getLearntimestamp())

@@ -86,7 +86,7 @@ public class PaxosProposer extends PaxosParticipant {
                 if (reqArch != null) {
                     advancePaxosRound(reqArch);
                 }
-                continue;
+                continue; // TODO should be 'break' if it didnt advance the round?
             }
 
             iAmLeader = super.getServerState().isValidLeader();
@@ -126,7 +126,7 @@ public class PaxosProposer extends PaxosParticipant {
     }
 
     /**
-     * Sends phase1 to the Aceptors and waits for a majority of answers.
+     * Sends phase1 to the Acceptors and waits for a majority of answers.
      * Returns the reqId that was promised to propose on phase2,
      * could be an already accepted value or one that was chosen by this proposer
      * (if no values were accepted yet).
@@ -136,7 +136,7 @@ public class PaxosProposer extends PaxosParticipant {
         DadkvsServerState state = super.getServerState();
         ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector = new GenericResponseCollector<>(
-                phase1Responses, state.getNumAceptors());
+                phase1Responses, state.getNumAcceptors());
 
         if (state.getBallotNumber() == state.getInitialLeaderid()) {
             // skip phase1 if its the first leader
@@ -156,10 +156,10 @@ public class PaxosProposer extends PaxosParticipant {
                 .setPhase1Index(paxosRoundsProposed)
                 .setPhase1Timestamp(state.getBallotNumber());
 
-        for (DadkvsPaxosServiceStub aceptorStub : state.getAceptorStubs()) {
+        for (DadkvsPaxosServiceStub acceptorStub : state.getAcceptorStubs()) {
             CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> commit_observer = new CollectorStreamObserver<>(
                     commit_collector);
-            aceptorStub.phaseone(phase1Request.build(), commit_observer);
+            acceptorStub.phaseone(phase1Request.build(), commit_observer);
             System.out.println("PROPOSER: Sending Phase1 request to server (order: " + paxosRoundsProposed + ")");
         }
     }
@@ -169,7 +169,7 @@ public class PaxosProposer extends PaxosParticipant {
 
         Integer latestValue = null;
         int highestWriteTS = -1;
-        WaitForMajority(commit_collector, super.getServerState().getNumAceptors());
+        WaitForMajority(commit_collector, super.getServerState().getNumAcceptors());
         for (PhaseOneReply phaseOneReply : phase1Responses) {
             if (!phaseOneReply.getPhase1Accepted()) {
                 // there is a new leader with higher ID, phase1 rejected!
@@ -195,13 +195,13 @@ public class PaxosProposer extends PaxosParticipant {
     }
 
     /**
-     * Sends phase2 to the Aceptors and waits for a majority of answers.
+     * Sends phase2 to the Acceptors and waits for a majority of answers.
      * Returns true if it was successfull (accepted) or false otherwise
      */
     private boolean executesPhaseTwo(int reqId) {
         ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses = new ArrayList<>();
         GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector = new GenericResponseCollector<>(
-                phase2_responses, super.getServerState().getNumAceptors());
+                phase2_responses, super.getServerState().getNumAcceptors());
 
         sendPhaseTwo(reqId, phase2_collector);
         return waitPhaseTwoReplies(phase2_collector, phase2_responses);
@@ -216,17 +216,17 @@ public class PaxosProposer extends PaxosParticipant {
                 .setPhase2Timestamp(state.getBallotNumber())
                 .setPhase2Value(reqId);
 
-        for (DadkvsPaxosServiceStub aceptorStub : state.getAceptorStubs()) {
+        for (DadkvsPaxosServiceStub acceptorStub : state.getAcceptorStubs()) {
             CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> phase2_observer = new CollectorStreamObserver<>(
                     phase2_collector);
-            aceptorStub.phasetwo(phase2Request.build(), phase2_observer);
+            acceptorStub.phasetwo(phase2Request.build(), phase2_observer);
             System.out.println("PROPOSER: Sending Phase2 request to server");
         }
     }
 
     private boolean waitPhaseTwoReplies(GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector,
             ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_responses) {
-        WaitForMajority(phase2_collector, super.getServerState().getNumAceptors());
+        WaitForMajority(phase2_collector, super.getServerState().getNumAcceptors());
         System.out.println("PROPOSER: Phase 2 responses majority was received");
         for (PhaseTwoReply phaseTwoReply : phase2_responses) {
             if (!phaseTwoReply.getPhase2Accepted()) {

@@ -27,11 +27,11 @@ public class DadkvsServer {
         DebugModes debug = new DebugModes();
         DadkvsServerState state = new DadkvsServerState(kvsize, base_port, my_id, debug);
         PaxosProposer proposer = new PaxosProposer(state, requestArchiveStore, paxosLog);
-        PaxosAceptor aceptor = new PaxosAceptor(state, requestArchiveStore, paxosLog);
+        PaxosAcceptor acceptor = new PaxosAcceptor(state, requestArchiveStore, paxosLog);
         PaxosLearner learner = new PaxosLearner(state, requestArchiveStore, paxosLog);
 
         final BindableService service_impl = new DadkvsMainServiceImpl(proposer, learner, debug);
-        final BindableService paxos_impl = new DadkvsPaxosServiceImpl(aceptor, learner, debug);
+        final BindableService paxos_impl = new DadkvsPaxosServiceImpl(acceptor, learner, debug);
         final BindableService console_impl = new DadkvsConsoleServiceImpl(state, proposer, debug);
         
         // Create a new server to listen on port.

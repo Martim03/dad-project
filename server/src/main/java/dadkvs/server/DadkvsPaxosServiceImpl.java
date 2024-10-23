@@ -7,12 +7,12 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
 	// TODO VERIFY SYNCHRONIZED VS LOCKS
 
-	PaxosAceptor aceptor;
+	PaxosAcceptor acceptor;
 	PaxosLearner learner;
 	DebugModes debug;
 
-	public DadkvsPaxosServiceImpl(PaxosAceptor aceptor, PaxosLearner learner,DebugModes debug) {
-		this.aceptor = aceptor;
+	public DadkvsPaxosServiceImpl(PaxosAcceptor acceptor, PaxosLearner learner,DebugModes debug) {
+		this.acceptor = acceptor;
 		this.learner = learner;
 		this.debug = debug;
 	}
@@ -24,7 +24,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 		debug.applyDebugMode(learner.getServerState().getDebugMode(), false);
 
 		System.out.println("Receive phase1 request: " + request);
-		aceptor.receivePhaseOne(request, responseObserver);
+		acceptor.receivePhaseOne(request, responseObserver);
 	}
 
 	@Override
@@ -36,7 +36,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 		System.out.println("Receive phase two request: idx=" + request.getPhase2Index() + " val="
 				+ request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
 
-		aceptor.receivePhaseTwo(request, responseObserver);
+		acceptor.receivePhaseTwo(request, responseObserver);
 	}
 
 	@Override

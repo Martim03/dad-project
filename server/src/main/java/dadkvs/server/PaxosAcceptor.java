@@ -11,8 +11,8 @@ import dadkvs.util.PaxosProposal;
 import dadkvs.util.RequestArchiveStore;
 import io.grpc.stub.StreamObserver;
 
-public class PaxosAceptor extends PaxosParticipant {
-	public PaxosAceptor(DadkvsServerState state, RequestArchiveStore requestArchiveStore, PaxosLog paxosLog) {
+public class PaxosAcceptor extends PaxosParticipant {
+	public PaxosAcceptor(DadkvsServerState state, RequestArchiveStore requestArchiveStore, PaxosLog paxosLog) {
 		super(state, requestArchiveStore, paxosLog);
 	}
 

@@ -72,7 +72,7 @@ public class DadkvsServerState {
     }
 
     /**
-     * @return true if its set as leader and belongs to the current configuration of proposers/aceptors
+     * @return true if its set as leader and belongs to the current configuration of proposers/acceptors
      */
     public synchronized boolean isValidLeader() {
         return i_am_leader && !isOnlyLearner();
@@ -125,11 +125,11 @@ public class DadkvsServerState {
         return getNumServers();
     }
 
-    public synchronized int getNumAceptors() {
+    public synchronized int getNumAcceptors() {
         return CONFIG_MEMBERS[this.getConfig()].length;
     }
 
-    public synchronized DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] getAceptorStubs() {
+    public synchronized DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] getAcceptorStubs() {
         int[] configMembers = getConfigMembers();
         DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] stubs = new DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[configMembers.length];
 
