@@ -1,14 +1,16 @@
 package dadkvs.util;
 public class PaxosProposal {
+    public static final int UNDEFINED_VALUE = -1;
+    
     private int writeTS;
     private int readTS;
     private int reqId;
     private boolean commited;
 
     public PaxosProposal() {
-        this.reqId = -1;
-        this.writeTS = -1;
-        this.readTS = -1;
+        this.reqId = UNDEFINED_VALUE;
+        this.writeTS = UNDEFINED_VALUE;
+        this.readTS = UNDEFINED_VALUE;
         this.commited = false;
     }
 

@@ -22,6 +22,7 @@ EXECUTION:
 Occasionally, **from the acceptor's perspective**, phase two of the Paxos process might occur before phase one. This is not an issue, as the acceptor can still process phase two. The acceptor checks if the leader's ID is greater than or equal to its current ID. If so, it accepts the proposal, denying any outdated leader attempts, and updates the read and write timestamps accordingly.
 
 EXECUTION:
+- Set leader off on server0 and leader on server2 because server0 wont do phase1 because its first leader
 - IgnorePhase1Debug on 1 of the acceptors and see how it will manage to receive the phase2 first and unfold until the exectuion
 - After the complete round and execution set IgnorePhase1Debug off and see it receiving the delayed phase1 and hanlding it gracefully (idempotent and idependent)
 
@@ -31,6 +32,7 @@ EXECUTION:
 From the **learner's perspective**, it is possible to receive a "learn" message before any preceding Paxos messages have arrived. This is acceptable because the system is designed to handle multiple instances of learn or accept messages without altering the final outcome in the `PaxosLog`. The learner ensures that each request is executed only once in the correct order. The system handles commits sequentially, executing request *i* first, followed by request *i+1*, and so forth, guaranteeing that a request will not be executed again once processed.
 
 EXECUTION:
+- Set leader off on server0 and leader on server2 because server0 wont do phase1 because its first leader
 - OnlyLearnsDebug on 1 of the acceptors/learners , and see how it will manage to receive the learn withou any prior paxos message and execute the requests
 - Afterwards let the OnlyLearnsDebug off and see it receiving the delayed messages and it not influencing the outcome of the paxos nor executing again (idempotent and idependent)
 
