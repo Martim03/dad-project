@@ -21,7 +21,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     @Override
     public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
-        debug.applyDebugMode(learner.getServerState().getDebugMode(), true);
+        debug.applyDebugMode(RequestTypes.CLIENT_REQUEST);
 
         // for debug purposesd
         System.out.println("Receiving read request:" + request);
@@ -39,7 +39,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
     @Override
     public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
-        debug.applyDebugMode(learner.getServerState().getDebugMode(), true);
+        debug.applyDebugMode(RequestTypes.CLIENT_REQUEST);
 
         // for debug purposes
         System.out.println("Receiving commit request at "

@@ -47,7 +47,7 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
     }
 
     @Override
-    public void setdebug(DadkvsConsole.SetDebugRequest request,
+    public synchronized void setdebug(DadkvsConsole.SetDebugRequest request,
             StreamObserver<DadkvsConsole.SetDebugReply> responseObserver) {
         // for debug purposes
         System.out.println(request);
@@ -68,13 +68,6 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
         responseObserver.onCompleted();
 
         // handle debug mode changes
-
-        if (state.getDebugMode() == DebugModeCodes.CRASH.getCode()) {
-            // Terminate everything with shutdownHook
-            System.exit(0);
-        } else if (state.getDebugMode() == DebugModeCodes.UNFREEZE.getCode()) {
-            debug.unfreeze();
-        }
-
+        debug.executeDebugChanges();
     }
 }

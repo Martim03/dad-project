@@ -24,8 +24,8 @@ public class DadkvsServer {
 
         RequestArchiveStore requestArchiveStore = new RequestArchiveStore();
         PaxosLog paxosLog = new PaxosLog();
-        DebugModes debug = new DebugModes();
-        DadkvsServerState state = new DadkvsServerState(kvsize, base_port, my_id, debug);
+        DadkvsServerState state = new DadkvsServerState(kvsize, base_port, my_id);
+        DebugModes debug = new DebugModes(state);
         PaxosProposer proposer = new PaxosProposer(state, requestArchiveStore, paxosLog);
         PaxosAceptor aceptor = new PaxosAceptor(state, requestArchiveStore, paxosLog);
         PaxosLearner learner = new PaxosLearner(state, requestArchiveStore, paxosLog);
@@ -33,7 +33,7 @@ public class DadkvsServer {
         final BindableService service_impl = new DadkvsMainServiceImpl(proposer, learner, debug);
         final BindableService paxos_impl = new DadkvsPaxosServiceImpl(aceptor, learner, debug);
         final BindableService console_impl = new DadkvsConsoleServiceImpl(state, proposer, debug);
-        
+
         // Create a new server to listen on port.
         Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl)
                 .addService(paxos_impl).build();
@@ -42,7 +42,6 @@ public class DadkvsServer {
         // Server threads are running in the background.
         System.out.println("Server started");
         System.err.println("DEBUG: Server started");
-
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down gRPC server immediately...");

@@ -24,12 +24,12 @@ public class DadkvsServerState {
     private ManagedChannel[] channels;
     private DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
 
-    public DadkvsServerState(int kv_size, int port, int myself, DebugModes debug) {
+    public DadkvsServerState(int kv_size, int port, int myself) {
         base_port = port;
         my_id = myself;
         i_am_leader = myself == INITIAL_LEADER_ID;
         config = INITIAL_CONFIG;
-        debug_mode = 0;
+        debug_mode = DebugModeCodes.SLOW_MODE_OFF.getCode(); // initial debug mode 'normal'
         store_size = kv_size;
         store = new KeyValueStore(kv_size);
         main_loop = new MainLoop(this);
