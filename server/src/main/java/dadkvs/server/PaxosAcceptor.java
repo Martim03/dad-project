@@ -11,8 +11,8 @@ import dadkvs.util.PaxosProposal;
 import dadkvs.util.RequestArchiveStore;
 import io.grpc.stub.StreamObserver;
 
-public class PaxosAceptor extends PaxosParticipant {
-	public PaxosAceptor(DadkvsServerState state, RequestArchiveStore requestArchiveStore, PaxosLog paxosLog) {
+public class PaxosAcceptor extends PaxosParticipant {
+	public PaxosAcceptor(DadkvsServerState state, RequestArchiveStore requestArchiveStore, PaxosLog paxosLog) {
 		super(state, requestArchiveStore, paxosLog);
 	}
 
@@ -31,7 +31,7 @@ public class PaxosAceptor extends PaxosParticipant {
 		PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase1Index());
 
 		if (currentProposal == null) {
-			// if it does not exist answer with default values (0, 0, -1)
+			// if it does not exist answer with default values (-1, -1, -1)
 			currentProposal = new PaxosProposal();
 		}
 
