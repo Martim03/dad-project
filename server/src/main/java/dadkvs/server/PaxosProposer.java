@@ -87,7 +87,6 @@ public class PaxosProposer extends PaxosParticipant {
                     // know the reconfigs and instead it uses the 'config' field of the messages to
                     // anounce config changes
 
-
                     // cant advance to the next paxos round if it doesnt know the
                     // request yet (could be a reconfig), just go to "sleep" until the request
                     // arrives
@@ -127,6 +126,14 @@ public class PaxosProposer extends PaxosParticipant {
         }
     }
 
+    /**
+     * Marks the request of the paxos round as unproposable, checks if the round
+     * introduced
+     * a configuration change and increments the paxos round of the proposer
+     * 
+     * @param reqArch the request that was decided in the paxos round
+     * 
+     */
     private void advancePaxosRound(RequestArchive<DadkvsMain.CommitRequest, DadkvsMain.CommitReply> reqArch) {
         // Reached the end of the paxos round successfully, go to next one
         reqArch.markUnproposable(); // mark the proposed request as unporoposable to next rounds)
@@ -180,8 +187,9 @@ public class PaxosProposer extends PaxosParticipant {
     private Integer waitPhaseOneReplies(GenericResponseCollector<DadkvsPaxos.PhaseOneReply> commit_collector,
             ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses) {
 
-        Integer latestValue = null;
-        int highestWriteTS = -1;
+        Integer latestValue = PaxosProposal.UNDEFINED_VALUE;
+        int highestWriteTS = PaxosProposal.UNDEFINED_VALUE;
+
         WaitForMajority(commit_collector, super.getServerState().getNumAcceptors());
         for (PhaseOneReply phaseOneReply : phase1Responses) {
             if (!phaseOneReply.getPhase1Accepted()) {
@@ -196,7 +204,9 @@ public class PaxosProposer extends PaxosParticipant {
             }
         }
 
-        if (latestValue == null) {
+        if (latestValue == PaxosProposal.UNDEFINED_VALUE) {
+            // there wasnt an ongoing proposed value yet
+
             System.out.println("PROPOSER: CHOOSING OWN VALUE");
             // chooses own value
             return chooseOwnProposeValue();

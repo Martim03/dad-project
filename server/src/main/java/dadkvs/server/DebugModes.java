@@ -51,8 +51,7 @@ public class DebugModes {
      * Applies the debug modes to the received requests, e.g. slowmode(random sleep)
      * and freeze(ignore request).
      */
-    public synchronized void applyDebugMode(RequestTypes requestType) {
-
+    public void applyDebugMode(RequestTypes requestType) {
         getDebugger().applyRequestEffects(requestType);
     }
 
@@ -79,7 +78,7 @@ public class DebugModes {
 
     private class FreezeDebugMode extends DebugMode {
         @Override
-        public synchronized void applyRequestEffects(RequestTypes requestType) {
+        public void applyRequestEffects(RequestTypes requestType) {
             System.out.println("DEBUG: FreezeDebugMode");
             if (requestType != RequestTypes.CLIENT_REQUEST) {
                 // if the request is not a client request, dont block it
@@ -89,7 +88,9 @@ public class DebugModes {
             // Block the request
             System.out.println("FREEZE: Blocking request unitl UNFREEZE");
             try {
-                this.wait();
+                synchronized (this) {
+                    this.wait();
+                }
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -98,7 +99,7 @@ public class DebugModes {
         }
 
         @Override
-        public synchronized void executeChanges() {
+        public void executeChanges() {
             // Do nothing
         }
 
@@ -121,8 +122,8 @@ public class DebugModes {
     }
 
     private class SlowModeOnDebugMode extends DebugMode {
-        private static final int MIN_SLEEP_MS = 100;
-        private static final int MAX_SLEEP_MS = 1000;
+        private static final int MIN_SLEEP_MS = 500;
+        private static final int MAX_SLEEP_MS = 2000;
 
         @Override
         public void applyRequestEffects(RequestTypes requestType) {
@@ -165,7 +166,7 @@ public class DebugModes {
 
     private class BlockPhaseOneDebugMode extends DebugMode {
         @Override
-        public synchronized void applyRequestEffects(RequestTypes requestType) {
+        public void applyRequestEffects(RequestTypes requestType) {
             System.out.println("DEBUG: BlockPhaseOneDebugMode");
             if (requestType != RequestTypes.PHASE_ONE_REQUEST) {
                 // if the request is not a phase one request, dont block it
@@ -174,7 +175,9 @@ public class DebugModes {
 
             System.out.println("BLOCK_PHASE_ONE: Blocking Phase One");
             try {
-                this.wait();
+                synchronized (this) {
+                    this.wait();
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -204,7 +207,7 @@ public class DebugModes {
 
     private class BlockPhaseOneAndTwoDebugMode extends DebugMode {
         @Override
-        public synchronized void applyRequestEffects(RequestTypes requestType) {
+        public void applyRequestEffects(RequestTypes requestType) {
             System.out.println("DEBUG: BlockPhaseOneAndTwoDebugMode");
             if (requestType != RequestTypes.PHASE_ONE_REQUEST && requestType != RequestTypes.PHASE_TWO_REQUEST) {
                 // if the request is not a phase one request nor a phase two request, dont block
@@ -214,7 +217,9 @@ public class DebugModes {
 
             System.out.println("BLOCK_PHASE_ONE_AND_TWO: Blocking Phase One And Two");
             try {
-                this.wait();
+                synchronized (this) {
+                    this.wait();
+                }
 
             } catch (InterruptedException e) {
                 e.printStackTrace();

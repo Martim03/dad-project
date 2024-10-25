@@ -27,28 +27,34 @@ public class PaxosAcceptor extends PaxosParticipant {
 
 		System.out.println("ACEPTOR: Receive phase1 request: " + request);
 
-		PaxosLog paxosLog = super.getPaxosLog();
-		PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase1Index());
-
-		if (currentProposal == null) {
-			// if it does not exist answer with default values (-1, -1, -1)
-			currentProposal = new PaxosProposal();
-		}
-
 		DadkvsPaxos.PhaseOneReply.Builder phase1Reply = DadkvsPaxos.PhaseOneReply.newBuilder();
+		PaxosLog paxosLog = super.getPaxosLog();
+		PaxosProposal currentProposal;
 
-		if (request.getPhase1Timestamp() < currentProposal.getReadTS()) {
-			// reject the request
-			phase1Reply.setPhase1Accepted(false);
+		synchronized (this) { // must be synchronized to ensure that the operations are atomic
+			currentProposal = paxosLog.getPropose(request.getPhase1Index());
 
-			responseObserver.onNext(phase1Reply.build());
-			responseObserver.onCompleted();
-			return;
+			if (currentProposal == null) {
+				// if it does not exist answer with default values (-1, -1, -1)
+				currentProposal = new PaxosProposal();
+				paxosLog.setPropose(request.getPhase1Index(), currentProposal);
+			}
+
+			if (request.getPhase1Timestamp() < currentProposal.getReadTS()) {
+				// reject the request
+				System.out.println("REJECTED");
+				phase1Reply.setPhase1Accepted(false);
+
+				responseObserver.onNext(phase1Reply.build());
+				responseObserver.onCompleted();
+				return;
+			}
+
+			// Update the readTS of the request
+			currentProposal.setReadTS(request.getPhase1Timestamp());
 		}
 
-		// Update the readTS of the request
-		currentProposal.setReadTS(request.getPhase1Timestamp());
-
+		// Respond to the Request
 		phase1Reply.setPhase1Config(request.getPhase1Config())
 				.setPhase1Index(request.getPhase1Index())
 				.setPhase1Timestamp(currentProposal.getWriteTS())
@@ -71,36 +77,39 @@ public class PaxosAcceptor extends PaxosParticipant {
 
 		System.out.println("ACEPTOR: Receive phase two request: idx=" + request.getPhase2Index() + " val="
 				+ request.getPhase2Value() + " ts=" + request.getPhase2Timestamp());
-
+				
+		DadkvsPaxos.PhaseTwoReply.Builder phase2Reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
 		PaxosLog paxosLog = super.getPaxosLog();
 
-		PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase2Index());
-		if (currentProposal == null) {
-			// if it does not exist answer with default values (0, 0, -1)
-			currentProposal = new PaxosProposal();
-		}
+		synchronized (this) {
+			PaxosProposal currentProposal = paxosLog.getPropose(request.getPhase2Index());
+			if (currentProposal == null) {
+				// if it does not exist answer with default values (-1, -1, -1)
+				currentProposal = new PaxosProposal();
+				paxosLog.setPropose(request.getPhase2Index(), currentProposal);
 
-		DadkvsPaxos.PhaseTwoReply.Builder phase2Reply = DadkvsPaxos.PhaseTwoReply.newBuilder();
+			}
 
-		if (request.getPhase2Timestamp() < currentProposal.getReadTS()) {
-			// reject the request
-			System.out.println("ACEPTOR: Rejecting phase two request: idx=" + request.getPhase2Index() + " ts="
-					+ request.getPhase2Timestamp());
-
-			phase2Reply.setPhase2Accepted(false);
-
-			responseObserver.onNext(phase2Reply.build());
-			responseObserver.onCompleted();
-			return;
-		}
-
-		System.out.println(
-				"ACEPTOR: Accepting phase two request: idx=" + request.getPhase2Index() + " ts="
+			if (request.getPhase2Timestamp() < currentProposal.getReadTS()) {
+				// reject the request
+				System.out.println("ACEPTOR: Rejecting phase two request: idx=" + request.getPhase2Index() + " ts="
 						+ request.getPhase2Timestamp());
 
-		// Update the writeTS and readTS of the request
-		currentProposal.setWriteTS(request.getPhase2Timestamp()).setReadTS(request.getPhase2Timestamp());
+				phase2Reply.setPhase2Accepted(false);
 
+				responseObserver.onNext(phase2Reply.build());
+				responseObserver.onCompleted();
+				return;
+			}
+
+			System.out.println(
+					"ACEPTOR: Accepting phase two request: idx=" + request.getPhase2Index() + " ts="
+							+ request.getPhase2Timestamp());
+
+			// Update the writeTS and readTS of the request
+			currentProposal.setWriteTS(request.getPhase2Timestamp()).setReadTS(request.getPhase2Timestamp());
+		}
+		// Respond to the Request
 		phase2Reply.setPhase2Config(request.getPhase2Config())
 				.setPhase2Index(request.getPhase2Index())
 				.setPhase2Accepted(true);

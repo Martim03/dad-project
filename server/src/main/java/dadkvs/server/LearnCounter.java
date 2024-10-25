@@ -13,7 +13,7 @@ public class LearnCounter {
 		}
 
 		public synchronized int incrementCounter(int id) {
-			if (this.leaderId != id) {
+			if (id > this.leaderId) {
 				this.counter = 0;
 				this.leaderId = id;
 			}
